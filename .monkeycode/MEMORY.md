@@ -57,3 +57,11 @@ Entries discovered by the Agent during task execution should follow this format:
   - The surveyor module seed lives in backend/src/db/surveyor_seed.sql and is idempotent: it deletes its own tables first, so it can be re-applied alone with `psql -f surveyor_seed.sql` against the dev database without running the full (non-idempotent) seed.ts.
   - When re-extracting data from the source workbook `Surveyors Invoices 2025-26 Rev-10 (3).xlsm` (Master_Data sheet), the approver columns start at V (col 22 = Approved By, col 23 = Approval Date, col 24 = Snapshot). Using 1-based indexing in a Python generator script, approved_by = row[21] and approved_at = row[22]; earlier code mis-mapped these and fed a person's name into the timestamptz column.
   - Pay order status flow is enforced server-side: draft -> issued -> paid, with draft/issued -> cancelled; paid and cancelled are terminal. The invoice lock check must exclude pay orders with status 'cancelled' or reopen is blocked after a cancelled PO.
+  - Invoice data entry and approval run contract-aware automatic checks: unknown/closed contracts, dates outside the contract validity window, and vendor-contractor mismatches are rejected with 400/409; exceeding the contract balance is allowed but flags alert='Overbilling'. The approved-invoice lock and pay order numbering must run inside the transaction using the transaction client (nextEntryNo accepts an optional client), otherwise multi-group auto-generation hits unique violations.
+
+[Project Knowledge Summary]
+- Date: 2026-08-16
+- Context: Discovered by Agent while releasing v1.0.0 of the PRL-Finance-Web-App repository
+- Category: Workflow & Collaboration
+- Instructions:
+  - Release process for github.com/AbdulMoiz162005/PRL-Finance-Web-App: commit on main, push, then `git tag -a v1.0.0 -m <msg>` + `git push origin <tag>`; create the GitHub release via the API with a token retrieved from the git credential helper (`printf "protocol=https\nhost=github.com\n" | git credential fill | sed -n 's/^password=//p'`) and `curl -X POST https://api.github.com/repos/<owner>/<repo>/releases` with the JSON body in a file. `gh` CLI is not logged in and cannot be used.
