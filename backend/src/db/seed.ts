@@ -12,13 +12,13 @@ const runSqlFile = async (file: string) => {
 
 const seedUsers = async () => {
   const users = [
-    { name: 'Platform Administrator', email: 'admin@meridianrefinery.ng', role: 'admin', title: 'System Administrator', department: 'IT' },
-    { name: 'Adebayo Okafor', email: 'director@meridianrefinery.ng', role: 'director', title: 'Managing Director', department: 'Executive' },
-    { name: 'John Obi', email: 'finance@meridianrefinery.ng', role: 'accountant', title: 'Finance Manager', department: 'Finance & Admin' },
-    { name: 'Amina Suleiman', email: 'accountant@meridianrefinery.ng', role: 'accountant', title: 'Senior Accountant', department: 'Finance & Admin' },
-    { name: 'Chioma Eze', email: 'auditor@meridianrefinery.ng', role: 'auditor', title: 'Internal Auditor', department: 'Audit' },
-    { name: 'Sarah Adeyemi', email: 'ops@meridianrefinery.ng', role: 'manager', title: 'Terminal Operations Manager', department: 'Terminal Operations' },
-    { name: 'David Musa', email: 'operator@meridianrefinery.ng', role: 'operator', title: 'Gate / Loading Operator', department: 'Terminal Operations' },
+    { name: 'Platform Administrator', email: 'admin@prl.com.pk', role: 'admin', title: 'System Administrator', department: 'IT' },
+    { name: 'Ahmed Raza', email: 'director@prl.com.pk', role: 'director', title: 'Managing Director', department: 'Executive' },
+    { name: 'Bilal Khan', email: 'finance@prl.com.pk', role: 'accountant', title: 'Finance Manager', department: 'Finance & Admin' },
+    { name: 'Sana Malik', email: 'accountant@prl.com.pk', role: 'accountant', title: 'Senior Accountant', department: 'Finance & Admin' },
+    { name: 'Usman Tariq', email: 'auditor@prl.com.pk', role: 'auditor', title: 'Internal Auditor', department: 'Audit' },
+    { name: 'Farhan Qureshi', email: 'ops@prl.com.pk', role: 'manager', title: 'Terminal Operations Manager', department: 'Terminal Operations' },
+    { name: 'Imran Sheikh', email: 'operator@prl.com.pk', role: 'operator', title: 'Gate / Loading Operator', department: 'Terminal Operations' },
   ];
 
   const companyId = '00000000-0000-4000-8000-000000000001';

@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, PenLine, FileText, ArrowLeftRight, Package, Factory,
   Wallet, BadgeDollarSign, FileBarChart, ListChecks, ScrollText, Users, Settings,
-  LogOut, Fuel, Scale, Gauge,
+  LogOut, Fuel, Scale, Gauge, Sun, Moon,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '../lib/auth';
@@ -41,22 +41,43 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const navigate = useNavigate();
   const items = NAV.filter((i) => !user || i.roles.includes(user.role));
 
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
+  const toggleTheme = useCallback(() => {
+    setDark((prev) => {
+      const next = !prev;
+      document.documentElement.classList.toggle('dark', next);
+      localStorage.setItem('rf_theme', next ? 'dark' : 'light');
+      return next;
+    });
+  }, []);
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark);
+    localStorage.setItem('rf_theme', dark ? 'dark' : 'light');
+  }, [dark]);
+
   const doLogout = () => {
     logout();
     navigate('/login');
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-100">
+    <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-slate-950">
       <aside className="w-60 shrink-0 bg-ink-900 text-white flex flex-col">
         <div className="flex items-center gap-2.5 px-4 h-16 border-b border-white/10">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600">
             <Fuel className="h-5 w-5 text-white" />
           </div>
-          <div className="leading-tight">
-            <p className="text-sm font-bold">Meridian Refinery</p>
+          <div className="leading-tight min-w-0 flex-1">
+            <p className="text-sm font-bold truncate">Pakistan Refinery Limited</p>
             <p className="text-[10px] text-slate-400 uppercase tracking-widest">Finance System</p>
           </div>
+          <button
+            onClick={toggleTheme}
+            title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="rounded-md p-1.5 text-slate-400 hover:bg-white/10 hover:text-white"
+          >
+            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
         </div>
         <nav className="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5">
           {items.map((i) => (

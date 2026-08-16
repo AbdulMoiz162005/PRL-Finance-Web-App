@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   LayoutDashboard, FileText, Scale, BadgeDollarSign, ScrollText, BarChart3,
   Plus, CheckCircle2, XCircle, RotateCcw, Send, Banknote, Ban, Search, ShieldAlert, Zap,
+  ChevronsUpDown, ArrowUp, ArrowDown, FileDown, FileType2 as FilePdf, Printer,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { api, errMsg } from '../lib/api';
@@ -14,6 +15,63 @@ const PKR = (n: number | string | null | undefined): string =>
 
 const invStatus = (s?: string | null) => s?.toLowerCase() || 'pending';
 const poStatus = (s?: string | null) => s?.toLowerCase() || 'draft';
+
+const downloadExport = async (fmt: 'csv' | 'pdf', type: string) => {
+  try {
+    const r = await api.get(`/surveyors/export/${fmt}`, { params: { type }, responseType: 'blob' });
+    const url = URL.createObjectURL(r.data as Blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `surveyors_${type}_${new Date().toISOString().slice(0, 10)}.${fmt}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    window.alert(errMsg(e));
+  }
+};
+
+// Reusable sortable table header
+type SortDir = 'asc' | 'desc';
+interface SortState { by: string; dir: SortDir }
+const toggleSort = (prev: SortState, col: string): SortState =>
+  prev.by === col ? { by: col, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { by: col, dir: 'asc' };
+
+const SortTh: React.FC<{
+  label: string; col: string; sort: SortState; onSort: (col: string) => void;
+  align?: 'right'; className?: string;
+}> = ({ label, col, sort, onSort, align, className }) => (
+  <th
+    className={clsx(
+      'px-4 py-3 text-left text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-900 dark:text-slate-400 whitespace-nowrap select-none cursor-pointer hover:text-brand-600 dark:hover:text-brand-400',
+      align === 'right' && 'text-right',
+      className,
+    )}
+    onClick={() => onSort(col)}
+  >
+    <span className="inline-flex items-center gap-1">
+      {label}
+      {sort.by !== col && <ChevronsUpDown className="h-3 w-3 opacity-50" />}
+      {sort.by === col && sort.dir === 'asc' && <ArrowUp className="h-3 w-3" />}
+      {sort.by === col && sort.dir === 'desc' && <ArrowDown className="h-3 w-3" />}
+    </span>
+  </th>
+);
+
+const ExportButtons: React.FC<{ type: string; onPrint?: () => void }> = ({ type, onPrint }) => (
+  <div className="flex items-center gap-1.5 no-print">
+    <button className="btn-ghost !px-2.5 !py-1.5 text-xs" onClick={() => downloadExport('csv', type)} title="Export CSV">
+      <FileDown className="h-3.5 w-3.5" /> CSV
+    </button>
+    <button className="btn-ghost !px-2.5 !py-1.5 text-xs" onClick={() => downloadExport('pdf', type)} title="Export PDF">
+      <FilePdf className="h-3.5 w-3.5" /> PDF
+    </button>
+    <button className="btn-ghost !px-2.5 !py-1.5 text-xs" onClick={onPrint || (() => window.print())} title="Print">
+      <Printer className="h-3.5 w-3.5" /> Print
+    </button>
+  </div>
+);
 
 type Tab = 'tower' | 'contracts' | 'invoices' | 'payorders' | 'log' | 'analysis';
 
@@ -37,14 +95,14 @@ export const Surveyors: React.FC = () => {
         title="Surveyor Invoices & Pay Orders"
         subtitle="Surveyor service contracts, invoice processing and PRL F.D. 310 pay order automation"
       />
-      <div className="flex gap-1 border-b border-slate-200 mb-5 overflow-x-auto">
+      <div className="flex gap-1 border-b border-slate-200 mb-5 dark:border-slate-800 overflow-x-auto no-print">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={clsx(
               'flex items-center gap-1.5 px-3.5 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
-              tab === t.key ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-800',
+              tab === t.key ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 dark:text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:text-slate-200',
             )}
           >
             {t.icon}
@@ -72,7 +130,7 @@ const Tower: React.FC = () => {
     api.get('/surveyors/dashboard').then((r) => setData(r.data)).catch((e) => setError(errMsg(e)));
   }, []);
 
-  if (error) return <div className="rounded-lg bg-rose-50 p-4 text-sm text-rose-600">{error}</div>;
+  if (error) return <div className="rounded-lg bg-rose-50 p-4 text-sm text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">{error}</div>;
   if (!data) return <Spinner />;
   const s = data.summary;
 
@@ -89,7 +147,7 @@ const Tower: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-slate-500 uppercase">
+                <tr className="text-left text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase">
                   <th className="py-2">Vendor</th>
                   <th className="py-2 text-right">Count</th>
                   <th className="py-2 text-right">Amount</th>
@@ -98,8 +156,8 @@ const Tower: React.FC = () => {
               </thead>
               <tbody>
                 {data.vendors.map((v: any) => (
-                  <tr key={v.vendor} className="border-t border-slate-100">
-                    <td className="py-2 font-medium text-slate-800">{v.vendor}</td>
+                  <tr key={v.vendor} className="border-t border-slate-100 dark:border-slate-800">
+                    <td className="py-2 font-medium text-slate-800 dark:text-slate-200 dark:text-slate-200">{v.vendor}</td>
                     <td className="py-2 text-right">{v.invoice_count}</td>
                     <td className="py-2 text-right">{PKR(v.total_amount)}</td>
                     <td className="py-2 text-right">
@@ -130,7 +188,7 @@ const Tower: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-slate-500 uppercase">
+                <tr className="text-left text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase">
                   <th className="py-2">Invoice</th>
                   <th className="py-2">Vendor</th>
                   <th className="py-2 text-right">Amount</th>
@@ -140,15 +198,15 @@ const Tower: React.FC = () => {
               </thead>
               <tbody>
                 {data.recent.map((r: any) => (
-                  <tr key={r.invoice_no + r.created_at} className="border-t border-slate-100">
-                    <td className="py-2 font-medium text-slate-800">{r.invoice_no}</td>
+                  <tr key={r.invoice_no + r.created_at} className="border-t border-slate-100 dark:border-slate-800">
+                    <td className="py-2 font-medium text-slate-800 dark:text-slate-200 dark:text-slate-200">{r.invoice_no}</td>
                     <td className="py-2">{r.vendor}</td>
                     <td className="py-2 text-right">{PKR(r.amount)}</td>
                     <td className="py-2">
                       <Badge status={r.approval_status} label={r.approval_status || '—'} />
                       {r.alert && <Badge status="alert" label={r.alert} />}
                     </td>
-                    <td className="py-2 text-slate-500">{fmtDate(r.created_at)}</td>
+                    <td className="py-2 text-slate-500 dark:text-slate-400 dark:text-slate-500">{fmtDate(r.created_at)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -170,11 +228,19 @@ const Contracts: React.FC = () => {
   const [error, setError] = useState('');
   const [editing, setEditing] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
+  const [q, setQ] = useState('');
+  const [status, setStatus] = useState('');
+  const [sort, setSort] = useState<SortState>({ by: '', dir: 'asc' });
 
   const load = useCallback(() => {
     setLoading(true);
-    api.get('/surveyors/contracts').then((r) => setItems(r.data.items || [])).catch((e) => setError(errMsg(e))).finally(() => setLoading(false));
-  }, []);
+    api.get('/surveyors/contracts', {
+      params: { search: q || undefined, status: status || undefined, sort_by: sort.by || undefined, sort_dir: sort.dir },
+    })
+      .then((r) => setItems(r.data.items || []))
+      .catch((e) => setError(errMsg(e)))
+      .finally(() => setLoading(false));
+  }, [q, status, sort]);
 
   useEffect(load, [load]);
 
@@ -202,44 +268,57 @@ const Contracts: React.FC = () => {
   return (
     <div>
       {error && <p className="mb-3 text-sm text-rose-600">{error}</p>}
-      <div className="flex justify-end mb-4">
-        <button onClick={() => setEditing({ ...emptyContract })} className="btn btn-primary">
-          <Plus className="h-4 w-4" /> New Contract
-        </button>
+      <div className="flex flex-wrap items-center gap-2 mb-4 no-print">
+        <div className="relative">
+          <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-slate-400" />
+          <input className="input pl-8 w-56" placeholder="Search contracts…" value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        <select className="input w-40" value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="">All statuses</option>
+          <option value="open">open</option>
+          <option value="closed">closed</option>
+          <option value="hold">hold</option>
+        </select>
+        <div className="ml-auto flex items-center gap-2">
+          <ExportButtons type="contracts" />
+          <button onClick={() => setEditing({ ...emptyContract })} className="btn btn-primary">
+            <Plus className="h-4 w-4" /> New Contract
+          </button>
+        </div>
       </div>
       {loading ? <Spinner /> : items.length === 0 ? <Empty message="No contracts" /> : (
         <div className="overflow-x-auto card p-0">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-slate-500 uppercase bg-slate-50">
-                <th className="px-4 py-3">Code</th>
-                <th className="px-4 py-3">Contractor</th>
-                <th className="px-4 py-3">Service</th>
-                <th className="px-4 py-3 text-right">Value</th>
-                <th className="px-4 py-3 text-right">Used</th>
-                <th className="px-4 py-3">Utilization</th>
-                <th className="px-4 py-3">Period</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+              <tr className="text-left text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-900 dark:text-slate-400">
+                <SortTh label="Code" col="contract_code" sort={sort} onSort={(c) => setSort(toggleSort(sort, c))} />
+                <SortTh label="Contractor" col="contractor" sort={sort} onSort={(c) => setSort(toggleSort(sort, c))} />
+                <SortTh label="Service" col="service_type" sort={sort} onSort={(c) => setSort(toggleSort(sort, c))} />
+                <SortTh label="Value" col="contract_value" sort={sort} onSort={(c) => setSort(toggleSort(sort, c))} align="right" />
+                <th className="px-4 py-3 text-right text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-900 dark:text-slate-400">Used</th>
+                <th className="px-4 py-3 text-left text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-900 dark:text-slate-400">Utilization</th>
+                <SortTh label="Period" col="start_date" sort={sort} onSort={(c) => setSort(toggleSort(sort, c))} />
+                <SortTh label="Status" col="status" sort={sort} onSort={(c) => setSort(toggleSort(sort, c))} />
+                <th className="px-4 py-3 text-right text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-900 dark:text-slate-400 no-print">Actions</th>
               </tr>
             </thead>
             <tbody>
               {items.map((c) => (
-                <tr key={c.id} className="border-t border-slate-100 hover:bg-slate-50">
-                  <td className="px-4 py-2.5 font-medium text-slate-800">{c.contract_code}</td>
+                <tr key={c.id} className="border-t border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60">
+                  <td className="px-4 py-2.5 font-medium text-slate-800 dark:text-slate-200 dark:text-slate-200">{c.contract_code}</td>
                   <td className="px-4 py-2.5">{c.contractor}</td>
                   <td className="px-4 py-2.5">{c.service_type}</td>
                   <td className="px-4 py-2.5 text-right">{PKR(c.contract_value)}</td>
                   <td className="px-4 py-2.5 text-right">{PKR(c.used_amount)}</td>
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-2">
-                      <div className="h-1.5 w-20 rounded-full bg-slate-200 overflow-hidden">
+                      <div className="h-1.5 w-20 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
                         <div className={clsx('h-full rounded-full', utilization(c) > 100 ? 'bg-rose-500' : utilization(c) > 80 ? 'bg-amber-500' : 'bg-emerald-500')} style={{ width: `${Math.min(100, utilization(c))}%` }} />
                       </div>
-                      <span className="text-xs text-slate-500">{Math.round(utilization(c))}%</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">{Math.round(utilization(c))}%</span>
                     </div>
                   </td>
-                  <td className="px-4 py-2.5 text-xs text-slate-500">{fmtDate(c.start_date)} → {fmtDate(c.end_date)}</td>
+                  <td className="px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">{fmtDate(c.start_date)} → {fmtDate(c.end_date)}</td>
                   <td className="px-4 py-2.5"><Badge status={c.status === 'overbilled' ? 'alert' : c.status} label={c.status} /></td>
                   <td className="px-4 py-2.5 text-right">
                     <button className="text-brand-600 hover:underline text-xs mr-2" onClick={() => setEditing({ ...c })}>Edit</button>
@@ -253,8 +332,8 @@ const Contracts: React.FC = () => {
       )}
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">{editing.id ? 'Edit Contract' : 'New Surveyor Contract'}</h3>
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">{editing.id ? 'Edit Contract' : 'New Surveyor Contract'}</h3>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Contract Code" value={editing.contract_code} onChange={(v) => setEditing({ ...editing, contract_code: v })} placeholder="PM-TNS-25" />
               <Field label="Contractor" value={editing.contractor} onChange={(v) => setEditing({ ...editing, contractor: v })} />
@@ -263,7 +342,7 @@ const Contracts: React.FC = () => {
               <Field label="Start Date" value={(editing.start_date || '').slice(0, 10)} onChange={(v) => setEditing({ ...editing, start_date: v })} type="date" />
               <Field label="End Date" value={(editing.end_date || '').slice(0, 10)} onChange={(v) => setEditing({ ...editing, end_date: v })} type="date" />
               <div>
-                <label className="text-xs font-semibold text-slate-600">Status</label>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Status</label>
                 <select className="input mt-1" value={editing.status} onChange={(e) => setEditing({ ...editing, status: e.target.value })}>
                   <option value="open">open</option>
                   <option value="closed">closed</option>
@@ -272,7 +351,7 @@ const Contracts: React.FC = () => {
               </div>
             </div>
             <div className="mt-4">
-              <label className="text-xs font-semibold text-slate-600">Notes</label>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Notes</label>
               <textarea className="input mt-1" rows={2} value={editing.notes || ''} onChange={(e) => setEditing({ ...editing, notes: e.target.value })} />
             </div>
             <div className="mt-5 flex justify-end gap-2">
@@ -288,7 +367,7 @@ const Contracts: React.FC = () => {
 
 const Field: React.FC<{ label: string; value: any; onChange: (v: string) => void; type?: string; placeholder?: string }> = ({ label, value, onChange, type = 'text', placeholder }) => (
   <div>
-    <label className="text-xs font-semibold text-slate-600">{label}</label>
+    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">{label}</label>
     <input className="input mt-1" type={type} value={value ?? ''} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
   </div>
 );
@@ -303,17 +382,27 @@ const InvoicesTab: React.FC = () => {
   const [vendor, setVendor] = useState('');
   const [vendors, setVendors] = useState<string[]>([]);
   const [contracts, setContracts] = useState<any[]>([]);
+  const [contract, setContract] = useState('');
   const [q, setQ] = useState('');
+  const [minAmount, setMinAmount] = useState('');
+  const [maxAmount, setMaxAmount] = useState('');
+  const [sort, setSort] = useState<SortState>({ by: '', dir: 'asc' });
   const [editing, setEditing] = useState<any | null>(null);
   const [busy, setBusy] = useState('');
 
   const load = useCallback(() => {
     setLoading(true);
-    api.get('/surveyors/invoices', { params: { status: status || undefined, vendor: vendor || undefined, search: q || undefined } })
+    api.get('/surveyors/invoices', {
+      params: {
+        status: status || undefined, vendor: vendor || undefined, contract: contract || undefined,
+        search: q || undefined, min_amount: minAmount || undefined, max_amount: maxAmount || undefined,
+        sort_by: sort.by || undefined, sort_dir: sort.dir,
+      },
+    })
       .then((r) => setItems(r.data.items || []))
       .catch((e) => setError(errMsg(e)))
       .finally(() => setLoading(false));
-  }, [status, vendor, q]);
+  }, [status, vendor, contract, q, minAmount, maxAmount, sort]);
 
   useEffect(load, [load]);
   useEffect(() => {
@@ -341,7 +430,7 @@ const InvoicesTab: React.FC = () => {
   const filterBtn = (label: string, value: string) => (
     <button
       onClick={() => setStatus(value)}
-      className={clsx('px-3 py-1.5 rounded-md text-xs font-medium transition-colors', status === value ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200')}
+      className={clsx('px-3 py-1.5 rounded-md text-xs font-medium transition-colors', status === value ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700')}
     >
       {label}
     </button>
@@ -350,12 +439,19 @@ const InvoicesTab: React.FC = () => {
   return (
     <div>
       {error && <p className="mb-3 text-sm text-rose-600">{error}</p>}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
+      <div className="flex flex-wrap items-center gap-2 mb-4 no-print">
         {filterBtn('All', '')}
         {filterBtn('Pending', 'pending')}
         {filterBtn('Approved', 'approved')}
         {filterBtn('Rejected', 'rejected')}
+        <select className="input w-44" value={contract} onChange={(e) => setContract(e.target.value)}>
+          <option value="">All contracts</option>
+          {contracts.map((c) => <option key={c.id} value={c.contract_code}>{c.contract_code}</option>)}
+        </select>
+        <input className="input w-28" type="number" placeholder="Min Rs" value={minAmount} onChange={(e) => setMinAmount(e.target.value)} title="Minimum amount" />
+        <input className="input w-28" type="number" placeholder="Max Rs" value={maxAmount} onChange={(e) => setMaxAmount(e.target.value)} title="Maximum amount" />
         <div className="ml-auto flex items-center gap-2">
+          <ExportButtons type="invoices" />
           <select className="input w-40" value={vendor} onChange={(e) => setVendor(e.target.value)}>
             <option value="">All vendors</option>
             {vendors.map((v) => <option key={v} value={v}>{v}</option>)}
@@ -373,26 +469,26 @@ const InvoicesTab: React.FC = () => {
         <div className="overflow-x-auto card p-0">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-slate-500 uppercase bg-slate-50">
-                <th className="px-4 py-3">Invoice</th>
-                <th className="px-4 py-3">Vendor</th>
-                <th className="px-4 py-3">Contract</th>
-                <th className="px-4 py-3">Tanker</th>
-                <th className="px-4 py-3 text-right">Amount</th>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+              <tr className="text-left text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-900 dark:text-slate-400">
+                <SortTh label="Invoice" col="invoice_no" sort={sort} onSort={(c) => setSort(toggleSort(sort, c))} />
+                <SortTh label="Vendor" col="vendor" sort={sort} onSort={(c) => setSort(toggleSort(sort, c))} />
+                <SortTh label="Contract" col="contract" sort={sort} onSort={(c) => setSort(toggleSort(sort, c))} />
+                <SortTh label="Tanker" col="tanker_name" sort={sort} onSort={(c) => setSort(toggleSort(sort, c))} />
+                <SortTh label="Amount" col="amount" sort={sort} onSort={(c) => setSort(toggleSort(sort, c))} align="right" />
+                <SortTh label="Date" col="invoice_date" sort={sort} onSort={(c) => setSort(toggleSort(sort, c))} />
+                <SortTh label="Status" col="approval_status" sort={sort} onSort={(c) => setSort(toggleSort(sort, c))} />
+                <th className="px-4 py-3 text-right text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-900 dark:text-slate-400 no-print">Actions</th>
               </tr>
             </thead>
             <tbody>
               {items.map((i) => (
-                <tr key={i.id} className="border-t border-slate-100 hover:bg-slate-50">
-                  <td className="px-4 py-2.5 font-medium text-slate-800">{i.invoice_no}</td>
+                <tr key={i.id} className="border-t border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60">
+                  <td className="px-4 py-2.5 font-medium text-slate-800 dark:text-slate-200 dark:text-slate-200">{i.invoice_no}</td>
                   <td className="px-4 py-2.5">{i.vendor}</td>
                   <td className="px-4 py-2.5 text-xs">{i.contract_code || '—'}</td>
                   <td className="px-4 py-2.5 text-xs">{i.tanker_name || '—'}</td>
                   <td className="px-4 py-2.5 text-right font-medium">{PKR(i.amount)}</td>
-                  <td className="px-4 py-2.5 text-xs text-slate-500">{fmtDate(i.invoice_date)}</td>
+                  <td className="px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">{fmtDate(i.invoice_date)}</td>
                   <td className="px-4 py-2.5">
                     <Badge status={i.approval_status} label={i.approval_status || '—'} />
                     {i.alert && <span className="ml-1"><Badge status="alert" label={i.alert} /></span>}
@@ -409,7 +505,7 @@ const InvoicesTab: React.FC = () => {
                       </>
                     )}
                     {invStatus(i.approval_status) !== 'pending' && (
-                      <button className="text-slate-500 hover:underline text-xs mr-2" disabled={!!busy} onClick={() => act(i.id, 'reopen')}>
+                      <button className="text-slate-500 dark:text-slate-400 dark:text-slate-500 hover:underline text-xs mr-2" disabled={!!busy} onClick={() => act(i.id, 'reopen')}>
                         <RotateCcw className="h-3.5 w-3.5 inline mr-0.5" />Reopen
                       </button>
                     )}
@@ -459,20 +555,20 @@ const InvoiceModal: React.FC<{ value: any; contracts: any[]; vendors: string[]; 
   const remaining = selectedContract ? Number(selectedContract.contract_value) - Number(selectedContract.used_amount) : null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-        <h3 className="text-lg font-bold text-slate-900 mb-4">{value.id ? 'Edit Invoice' : 'New Surveyor Invoice'}</h3>
+      <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 max-h-[90vh] overflow-y-auto">
+        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">{value.id ? 'Edit Invoice' : 'New Surveyor Invoice'}</h3>
         <div className="grid grid-cols-3 gap-3">
           <Field label="Invoice No" value={value.invoice_no} onChange={(v) => onChange({ ...value, invoice_no: v })} />
           <Field label="Serial No" value={value.serial_no} onChange={(v) => onChange({ ...value, serial_no: v })} />
           <div>
-            <label className="text-xs font-semibold text-slate-600">Vendor</label>
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Vendor</label>
             <select className="input mt-1" value={value.vendor || ''} onChange={(e) => onChange({ ...value, vendor: e.target.value })}>
               <option value="">Select vendor…</option>
               {Array.from(new Set([...vendors, ...contracts.map((c) => c.contractor)])).filter(Boolean).map((v) => <option key={v} value={v}>{v}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-xs font-semibold text-slate-600">Contract</label>
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Contract</label>
             <select className="input mt-1" value={value.contract_code || ''} onChange={(e) => selectContract(e.target.value)}>
               <option value="">No contract (manual entry)</option>
               {contracts.map((c) => {
@@ -486,7 +582,7 @@ const InvoiceModal: React.FC<{ value: any; contracts: any[]; vendors: string[]; 
               })}
             </select>
             {selectedContract && (
-              <p className={clsx('text-[11px] mt-1', remaining !== null && remaining < Number(value.amount || 0) ? 'text-rose-600 font-semibold' : 'text-slate-500')}>
+              <p className={clsx('text-[11px] mt-1', remaining !== null && remaining < Number(value.amount || 0) ? 'text-rose-600 font-semibold' : 'text-slate-500 dark:text-slate-400 dark:text-slate-500')}>
                 Balance: {PKR(remaining)} of {PKR(selectedContract.contract_value)}
                 {remaining !== null && remaining < Number(value.amount || 0) ? ' — amount exceeds contract balance (Overbilling)' : ''}
               </p>
@@ -496,7 +592,7 @@ const InvoiceModal: React.FC<{ value: any; contracts: any[]; vendors: string[]; 
           <Field label="Amount" value={value.amount} onChange={(v) => onChange({ ...value, amount: v })} type="number" />
           <Field label="Invoice Date" value={(value.invoice_date || '').slice(0, 10)} onChange={(v) => onChange({ ...value, invoice_date: v })} type="date" />
           <div>
-            <label className="text-xs font-semibold text-slate-600">Services Month</label>
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Services Month</label>
             <select className="input mt-1" value={(value.services_month || '').slice(0, 7)} onChange={(e) => onChange({ ...value, services_month: `${e.target.value}-01` })}>
               <option value="">Select month…</option>
               {monthOptions().map((m) => <option key={m} value={m}>{m}</option>)}
@@ -533,11 +629,23 @@ const PayOrders: React.FC = () => {
   const [detail, setDetail] = useState<any>(null);
   const [autoVendor, setAutoVendor] = useState('');
   const [vendors, setVendors] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [minAmount, setMinAmount] = useState('');
+  const [maxAmount, setMaxAmount] = useState('');
+  const [sort, setSort] = useState<SortState>({ by: '', dir: 'asc' });
 
   const load = useCallback(() => {
     setLoading(true);
-    api.get('/surveyors/pay-orders').then((r) => setItems(r.data.items || [])).catch((e) => setError(errMsg(e))).finally(() => setLoading(false));
-  }, []);
+    api.get('/surveyors/pay-orders', {
+      params: {
+        status: statusFilter || undefined, min_amount: minAmount || undefined, max_amount: maxAmount || undefined,
+        sort_by: sort.by || undefined, sort_dir: sort.dir,
+      },
+    })
+      .then((r) => setItems(r.data.items || []))
+      .catch((e) => setError(errMsg(e)))
+      .finally(() => setLoading(false));
+  }, [statusFilter, minAmount, maxAmount, sort]);
 
   useEffect(load, [load]);
   useEffect(() => {
@@ -594,9 +702,18 @@ const PayOrders: React.FC = () => {
     <div>
       {error && <p className="mb-3 text-sm text-rose-600">{error}</p>}
       {info && <p className="mb-3 text-sm text-emerald-600 font-medium">{info}</p>}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
+      <div className="flex flex-wrap items-center gap-2 mb-4 no-print">
+        <select className="input w-36" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option value="">All statuses</option>
+          <option value="draft">draft</option>
+          <option value="issued">issued</option>
+          <option value="paid">paid</option>
+          <option value="cancelled">cancelled</option>
+        </select>
+        <input className="input w-28" type="number" placeholder="Min Rs" value={minAmount} onChange={(e) => setMinAmount(e.target.value)} title="Minimum amount" />
+        <input className="input w-28" type="number" placeholder="Max Rs" value={maxAmount} onChange={(e) => setMaxAmount(e.target.value)} title="Maximum amount" />
         <div className="flex items-center gap-2 card px-3 py-2">
-          <span className="text-xs font-semibold text-slate-600">Auto-generate from approved invoices:</span>
+          <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Auto-generate from approved invoices:</span>
           <select className="input w-44" value={autoVendor} onChange={(e) => setAutoVendor(e.target.value)}>
             <option value="">All vendors</option>
             {vendors.map((v) => <option key={v} value={v}>{v}</option>)}
@@ -610,7 +727,8 @@ const PayOrders: React.FC = () => {
             <Zap className="h-4 w-4" /> {busy === 'auto' ? 'Generating…' : 'Auto Generate'}
           </button>
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <ExportButtons type="pay-orders" />
           <button onClick={openNew} className="btn"><Plus className="h-4 w-4" /> Manual Pay Order</button>
         </div>
       </div>
@@ -618,29 +736,29 @@ const PayOrders: React.FC = () => {
         <div className="overflow-x-auto card p-0">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-slate-500 uppercase bg-slate-50">
-                <th className="px-4 py-3">PO No</th>
-                <th className="px-4 py-3">Vendor</th>
-                <th className="px-4 py-3">Method</th>
-                <th className="px-4 py-3 text-right">Amount</th>
-                <th className="px-4 py-3">Amount in Words</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Cheque</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+              <tr className="text-left text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-900 dark:text-slate-400">
+                <SortTh label="PO No" col="pay_order_no" sort={sort} onSort={(c) => setSort(toggleSort(sort, c))} />
+                <SortTh label="Vendor" col="vendor" sort={sort} onSort={(c) => setSort(toggleSort(sort, c))} />
+                <SortTh label="Method" col="pay_method" sort={sort} onSort={(c) => setSort(toggleSort(sort, c))} />
+                <SortTh label="Amount" col="amount" sort={sort} onSort={(c) => setSort(toggleSort(sort, c))} align="right" />
+                <th className="px-4 py-3 text-left text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-900 dark:text-slate-400">Amount in Words</th>
+                <SortTh label="Status" col="status" sort={sort} onSort={(c) => setSort(toggleSort(sort, c))} />
+                <SortTh label="Cheque" col="cheque_no" sort={sort} onSort={(c) => setSort(toggleSort(sort, c))} />
+                <th className="px-4 py-3 text-right text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-900 dark:text-slate-400 no-print">Actions</th>
               </tr>
             </thead>
             <tbody>
               {items.map((p) => (
-                <tr key={p.id} className="border-t border-slate-100 hover:bg-slate-50">
-                  <td className="px-4 py-2.5 font-medium text-slate-800">{p.pay_order_no}</td>
+                <tr key={p.id} className="border-t border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60">
+                  <td className="px-4 py-2.5 font-medium text-slate-800 dark:text-slate-200 dark:text-slate-200">{p.pay_order_no}</td>
                   <td className="px-4 py-2.5">{p.vendor}</td>
                   <td className="px-4 py-2.5 capitalize">{p.pay_method}</td>
                   <td className="px-4 py-2.5 text-right font-medium">{PKR(p.amount)}</td>
-                  <td className="px-4 py-2.5 text-xs text-slate-500 max-w-[220px] truncate">{p.amount_in_words}</td>
+                  <td className="px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500 max-w-[220px] truncate">{p.amount_in_words}</td>
                   <td className="px-4 py-2.5"><Badge status={p.status} label={p.status} /></td>
                   <td className="px-4 py-2.5 text-xs">{p.cheque_no || '—'}</td>
                   <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                    <button className="text-slate-500 hover:underline text-xs mr-2" onClick={() => viewLines(p.id)}>Lines</button>
+                    <button className="text-slate-500 dark:text-slate-400 dark:text-slate-500 hover:underline text-xs mr-2" onClick={() => viewLines(p.id)}>Lines</button>
                     {poStatus(p.status) === 'draft' && (
                       <button className="text-brand-600 hover:underline text-xs mr-2" disabled={!!busy} onClick={() => poAct(p.id, 'issue')}>
                         <Send className="h-3.5 w-3.5 inline mr-0.5" />Issue
@@ -669,12 +787,12 @@ const PayOrders: React.FC = () => {
 
       {showNew && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">New Pay Order (F.D. 310)</h3>
+          <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">New Pay Order (F.D. 310)</h3>
             <div className="grid grid-cols-3 gap-3 mb-4">
               <Field label="Vendor" value={form.vendor} onChange={(v) => setForm({ ...form, vendor: v })} />
               <div>
-                <label className="text-xs font-semibold text-slate-600">Pay Method</label>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Pay Method</label>
                 <select className="input mt-1" value={form.pay_method} onChange={(e) => setForm({ ...form, pay_method: e.target.value })}>
                   <option value="cheque">cheque</option>
                   <option value="bank transfer">bank transfer</option>
@@ -684,15 +802,15 @@ const PayOrders: React.FC = () => {
               <Field label="Order No" value={form.order_no} onChange={(v) => setForm({ ...form, order_no: v })} placeholder="WIRE-…" />
             </div>
             <div className="mb-3">
-              <label className="text-xs font-semibold text-slate-600">Narrative</label>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Narrative</label>
               <textarea className="input mt-1" rows={2} value={form.narrative} onChange={(e) => setForm({ ...form, narrative: e.target.value })} />
             </div>
-            <p className="text-sm font-semibold text-slate-700 mb-2">Select approved invoices ({selected.size})</p>
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Select approved invoices ({selected.size})</p>
             <div className="border rounded-lg max-h-64 overflow-y-auto">
               {candidates.length === 0 ? <Empty message="No approved invoices available" /> : (
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-slate-50">
-                    <tr className="text-left text-xs text-slate-500 uppercase">
+                    <tr className="text-left text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase">
                       <th className="px-3 py-2"></th>
                       <th className="px-3 py-2">Invoice</th>
                       <th className="px-3 py-2">Vendor</th>
@@ -702,7 +820,7 @@ const PayOrders: React.FC = () => {
                   </thead>
                   <tbody>
                     {candidates.map((c) => (
-                      <tr key={c.id} className={clsx('border-t border-slate-100 cursor-pointer', selected.has(c.id) && 'bg-brand-50')} onClick={() => {
+                      <tr key={c.id} className={clsx('border-t border-slate-100 dark:border-slate-800 cursor-pointer', selected.has(c.id) && 'bg-brand-50')} onClick={() => {
                         const next = new Set(selected);
                         if (next.has(c.id)) next.delete(c.id); else next.add(c.id);
                         setSelected(next);
@@ -730,21 +848,21 @@ const PayOrders: React.FC = () => {
 
       {detail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">{detail.item.pay_order_no}</h3>
-                <p className="text-xs text-slate-500">{detail.item.amount_in_words}</p>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{detail.item.pay_order_no}</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">{detail.item.amount_in_words}</p>
               </div>
               <Badge status={detail.item.status} label={detail.item.status} />
             </div>
-            <div className="text-sm text-slate-600 mb-4">
+            <div className="text-sm text-slate-600 dark:text-slate-300 mb-4">
               <p><span className="font-semibold">Vendor:</span> {detail.item.vendor} · <span className="font-semibold">Method:</span> {detail.item.pay_method} · <span className="font-semibold">Order:</span> {detail.item.order_no || '—'}</p>
-              {detail.item.narrative && <p className="mt-1 text-xs text-slate-500">{detail.item.narrative}</p>}
+              {detail.item.narrative && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">{detail.item.narrative}</p>}
             </div>
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-slate-500 uppercase bg-slate-50">
+                <tr className="text-left text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase bg-slate-50 dark:bg-slate-900 dark:text-slate-400 dark:text-slate-500">
                   <th className="px-3 py-2">Description</th>
                   <th className="px-3 py-2">Invoice</th>
                   <th className="px-3 py-2">Tanker</th>
@@ -753,7 +871,7 @@ const PayOrders: React.FC = () => {
               </thead>
               <tbody>
                 {(detail.lines || []).map((l: any) => (
-                  <tr key={l.id} className="border-t border-slate-100">
+                  <tr key={l.id} className="border-t border-slate-100 dark:border-slate-800">
                     <td className="px-3 py-2">{l.description}</td>
                     <td className="px-3 py-2">{l.invoice_no}</td>
                     <td className="px-3 py-2 text-xs">{l.tanker_name || '—'}</td>
@@ -789,11 +907,16 @@ const ApprovalLog: React.FC = () => {
   return (
     <div>
       {error && <p className="mb-3 text-sm text-rose-600">{error}</p>}
+      <div className="flex justify-end mb-3 no-print">
+        <button className="btn-ghost !px-2.5 !py-1.5 text-xs" onClick={() => window.print()} title="Print">
+          <Printer className="h-3.5 w-3.5" /> Print
+        </button>
+      </div>
       {loading ? <Spinner /> : items.length === 0 ? <Empty message="No approval activity yet" /> : (
         <div className="overflow-x-auto card p-0">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-slate-500 uppercase bg-slate-50">
+              <tr className="text-left text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase bg-slate-50 dark:bg-slate-900 dark:text-slate-400 dark:text-slate-500">
                 <th className="px-4 py-3">Action</th>
                 <th className="px-4 py-3">Invoice</th>
                 <th className="px-4 py-3">Contract</th>
@@ -805,14 +928,14 @@ const ApprovalLog: React.FC = () => {
             </thead>
             <tbody>
               {items.map((l) => (
-                <tr key={l.id} className="border-t border-slate-100">
+                <tr key={l.id} className="border-t border-slate-100 dark:border-slate-800">
                   <td className="px-4 py-2.5"><Badge status={l.action === 'Rejected' ? 'Rejected' : l.action === 'Approved' ? 'Approved' : 'Pending'} label={l.action} /></td>
-                  <td className="px-4 py-2.5 font-medium text-slate-800">{l.invoice_no}</td>
+                  <td className="px-4 py-2.5 font-medium text-slate-800 dark:text-slate-200 dark:text-slate-200">{l.invoice_no}</td>
                   <td className="px-4 py-2.5 text-xs">{l.contract_code || '—'}</td>
                   <td className="px-4 py-2.5 text-right">{PKR(l.amount)}</td>
                   <td className="px-4 py-2.5 text-xs">{l.user_email || '—'}</td>
-                  <td className="px-4 py-2.5 text-xs text-slate-500 max-w-[240px] truncate">{l.remarks || '—'}</td>
-                  <td className="px-4 py-2.5 text-xs text-slate-500">{fmtDate(l.created_at)}</td>
+                  <td className="px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500 max-w-[240px] truncate">{l.remarks || '—'}</td>
+                  <td className="px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">{fmtDate(l.created_at)}</td>
                 </tr>
               ))}
             </tbody>
@@ -833,60 +956,75 @@ const Analysis: React.FC = () => {
     api.get('/surveyors/analysis').then((r) => setData(r.data)).catch((e) => setError(errMsg(e)));
   }, []);
 
-  if (error) return <div className="rounded-lg bg-rose-50 p-4 text-sm text-rose-600">{error}</div>;
+  if (error) return <div className="rounded-lg bg-rose-50 p-4 text-sm text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">{error}</div>;
   if (!data) return <Spinner />;
 
+  const byApprovalRows = data.by_approval || [];
+  const countOf = (s: string) => Number((byApprovalRows.find((r: any) => r.approval_status === s) || {}).invoice_count ?? 0);
+  const amountOf = (s: string) => Number((byApprovalRows.find((r: any) => r.approval_status === s) || {}).total_amount ?? 0);
   const byApproval = [
-    { name: 'Approved', value: Number(data.by_approval?.approved_count ?? 0) },
-    { name: 'Pending', value: Number(data.by_approval?.pending_count ?? 0) },
-    { name: 'Rejected', value: Number(data.by_approval?.rejected_count ?? 0) },
+    { name: 'Approved', value: countOf('Approved') },
+    { name: 'Pending', value: countOf('Pending') },
+    { name: 'Rejected', value: countOf('Rejected') },
   ].filter((d) => d.value > 0);
 
+  const totalValue = (data.by_vendor || []).reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0);
+  const totalCount = (data.by_vendor || []).reduce((s: number, r: any) => s + Number(r.invoice_count || 0), 0);
+  const pendingValue = amountOf('Pending');
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <Card title="Value by Vendor">
-        <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={data.by_vendor}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="vendor" tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 11 }} />
-            <Tooltip formatter={(v: any) => PKR(v)} />
-            <Bar dataKey="total_amount" name="Amount" fill="#0f766e" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </Card>
-      <Card title="Value by Service Type">
-        <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={data.by_service} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-            <XAxis type="number" tick={{ fontSize: 11 }} />
-            <YAxis type="category" dataKey="service_type" width={120} tick={{ fontSize: 10 }} />
-            <Tooltip formatter={(v: any) => PKR(v)} />
-            <Bar dataKey="total_amount" name="Amount" fill="#1d4ed8" radius={[0, 4, 4, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </Card>
-      <Card title="Approval Mix">
-        <ResponsiveContainer width="100%" height={240}>
-          <PieChart>
-            <Pie data={byApproval} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} label>
-              {byApproval.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-            </Pie>
-            <Tooltip />
-          </PieChart>
-        </ResponsiveContainer>
-      </Card>
-      <Card title="Monthly Trend">
-        <ResponsiveContainer width="100%" height={240}>
-          <BarChart data={data.by_month}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 11 }} />
-            <Tooltip formatter={(v: any) => PKR(v)} />
-            <Bar dataKey="total_amount" name="Amount" fill="#b45309" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </Card>
+    <div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <StatCard label="Invoice Value" value={PKR(totalValue)} icon={<BarChart3 className="h-4 w-4" />} hint={`${totalCount} invoices`} />
+        <StatCard label="Avg Invoice" value={PKR(totalCount ? totalValue / totalCount : 0)} icon={<BadgeDollarSign className="h-4 w-4" />} tone="blue" />
+        <StatCard label="Pending Value" value={PKR(pendingValue)} icon={<ShieldAlert className="h-4 w-4" />} tone="red" hint="Awaiting approval" />
+        <StatCard label="Approved Mix" value={`${countOf('Approved')} / ${totalCount}`} icon={<CheckCircle2 className="h-4 w-4" />} tone="green" hint="approved invoices" />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card title="Value by Vendor" subtitle="Total invoice value per surveyor">
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={data.by_vendor}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="vendor" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(v: any) => PKR(v)} />
+              <Bar dataKey="total_amount" name="Amount" fill="#0f766e" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+        <Card title="Value by Service Type" subtitle="Split by service_type_3">
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={data.by_service} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 11 }} />
+              <YAxis type="category" dataKey="service" width={140} tick={{ fontSize: 10 }} />
+              <Tooltip formatter={(v: any) => PKR(v)} />
+              <Bar dataKey="total_amount" name="Amount" fill="#1d4ed8" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+        <Card title="Approval Mix">
+          <ResponsiveContainer width="100%" height={240}>
+            <PieChart>
+              <Pie data={byApproval} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} label>
+                {byApproval.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </Card>
+        <Card title="Monthly Trend">
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={data.by_month}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(v: any) => PKR(v)} />
+              <Bar dataKey="total_amount" name="Amount" fill="#b45309" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      </div>
     </div>
   );
 };

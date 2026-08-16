@@ -5,15 +5,15 @@
 insert into companies (id, name, legal_name, tax_id, address, phone, email, currency, fiscal_year_start, registration_no)
 values (
   '00000000-0000-4000-8000-000000000001',
-  'Meridian Refinery Terminal Ltd',
-  'Meridian Refinery & Petrochemical Terminal Plc',
-  'TX-7712045-9',
-  'Km 12 Port Access Road, Terminal Zone B, Onne, Nigeria',
-  '+234 901 234 5678',
-  'finance@meridianrefinery.ng',
-  'USD',
-  '2026-01-01',
-  'RC-88231'
+  'Pakistan Refinery Limited',
+  'Pakistan Refinery Limited',
+  'NTN-0001234-5',
+  'Korangi Creek, Karachi, Pakistan',
+  '+92 21 3506 0000',
+  'finance@prl.com.pk',
+  'PKR',
+  '2025-01-01',
+  'PRL-KHI-001'
 );
 
 -- ---------------------------------------------------------------------------

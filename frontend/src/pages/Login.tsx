@@ -6,13 +6,13 @@ import { errMsg } from '../lib/api';
 import { ROLE_LABEL } from '../lib/format';
 
 const DEMO_USERS = [
-  { email: 'admin@meridianrefinery.ng', role: 'admin' },
-  { email: 'director@meridianrefinery.ng', role: 'director' },
-  { email: 'finance@meridianrefinery.ng', role: 'accountant' },
-  { email: 'accountant@meridianrefinery.ng', role: 'accountant' },
-  { email: 'auditor@meridianrefinery.ng', role: 'auditor' },
-  { email: 'ops@meridianrefinery.ng', role: 'manager' },
-  { email: 'operator@meridianrefinery.ng', role: 'operator' },
+  { email: 'admin@prl.com.pk', role: 'admin' },
+  { email: 'director@prl.com.pk', role: 'director' },
+  { email: 'finance@prl.com.pk', role: 'accountant' },
+  { email: 'accountant@prl.com.pk', role: 'accountant' },
+  { email: 'auditor@prl.com.pk', role: 'auditor' },
+  { email: 'ops@prl.com.pk', role: 'manager' },
+  { email: 'operator@prl.com.pk', role: 'operator' },
 ];
 
 export const Login: React.FC = () => {
@@ -45,14 +45,14 @@ export const Login: React.FC = () => {
             <Fuel className="h-7 w-7 text-white" />
           </div>
           <div className="text-white">
-            <h1 className="text-xl font-bold">Meridian Refinery</h1>
+            <h1 className="text-xl font-bold">Pakistan Refinery Limited</h1>
             <p className="text-xs uppercase tracking-widest text-brand-200">Finance &amp; Accounting System</p>
           </div>
         </div>
 
-        <div className="rounded-2xl bg-white p-6 shadow-2xl">
-          <h2 className="mb-1 text-lg font-bold text-slate-900">Sign in</h2>
-          <p className="mb-5 text-sm text-slate-500">Use your role-specific credentials</p>
+        <div className="rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+          <h2 className="mb-1 text-lg font-bold text-slate-900 dark:text-slate-100">Sign in</h2>
+          <p className="mb-5 text-sm text-slate-500 dark:text-slate-400">Use your role-specific credentials</p>
           <form onSubmit={submit} className="space-y-3">
             <div className="relative">
               <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
@@ -81,21 +81,21 @@ export const Login: React.FC = () => {
             </button>
           </form>
 
-          <div className="mt-5 border-t border-slate-100 pt-4">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Demo accounts</p>
+          <div className="mt-5 border-t border-slate-100 pt-4 dark:border-slate-800">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Demo accounts</p>
             <div className="space-y-1">
               {DEMO_USERS.map((u) => (
                 <button
                   key={u.email}
                   onClick={() => { setEmail(u.email); setPassword('Refinery@2026'); }}
-                  className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-brand-50 transition-colors"
+                  className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-brand-50 dark:hover:bg-slate-800 transition-colors"
                 >
-                  <span className="font-mono text-slate-600">{u.email}</span>
+                  <span className="font-mono text-slate-600 dark:text-slate-300">{u.email}</span>
                   <span className="font-semibold text-brand-600">{ROLE_LABEL[u.role]}</span>
                 </button>
               ))}
             </div>
-            <p className="mt-2 text-[11px] text-slate-400">Password for all demo accounts: <span className="font-mono">Refinery@2026</span></p>
+            <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">Password for all demo accounts: <span className="font-mono">Refinery@2026</span></p>
           </div>
         </div>
       </div>

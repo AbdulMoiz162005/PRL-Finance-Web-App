@@ -11,6 +11,15 @@ router.use(requireAuth);
 const COMPANY = (req: AuthRequest) => req.user!.companyId;
 type Db = import('pg').Pool | import('pg').PoolClient;
 
+// Advanced sorting helper: maps safe column names to SQL expressions.
+const sortSpec = (req: AuthRequest, allowed: Record<string, string>) => {
+  const col = req.query.sort_by ? String(req.query.sort_by) : null;
+  const dir = String(req.query.sort_dir || 'asc').toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+  if (!col) return null;
+  const expr = allowed[col];
+  return expr ? { expr, dir } : null;
+};
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -139,18 +148,26 @@ router.get(
   '/contracts',
   asyncHandler(async (req: AuthRequest, res) => {
     const { search } = parseSearch(req);
+    const status = req.query.status ? String(req.query.status) : null;
+    const sort = sortSpec(req, {
+      contract_code: 'c.contract_code', contractor: 'c.contractor', service_type: 'c.service_type',
+      contract_value: 'c.contract_value', start_date: 'c.start_date', end_date: 'c.end_date',
+      status: 'c.status',
+    });
     const params: unknown[] = [COMPANY(req)];
     let where = 'c.company_id = $1';
+    let n = 1;
     if (search) {
-      params.push(search);
-      where += ` and (c.contractor ilike '%'||$2||'%' or c.contract_code ilike '%'||$2||'%' or c.service_type ilike '%'||$2||'%')`;
+      n += 1; params.push(search);
+      where += ` and (c.contractor ilike '%'||$${n}||'%' or c.contract_code ilike '%'||$${n}||'%' or c.service_type ilike '%'||$${n}||'%')`;
     }
+    if (status) { n += 1; params.push(status); where += ` and lower(c.status) = lower($${n})`; }
     const result = await pool.query(
       `select c.*,
               coalesce((select sum(i.amount) from surveyor_invoices i where i.contract_id = c.id and i.approval_status = 'Approved'), 0) as used_amount,
               coalesce((select count(*) from surveyor_invoices i where i.contract_id = c.id), 0)::int as invoice_count,
               (select count(*) from surveyor_invoices i where i.contract_id = c.id and i.approval_status = 'Pending')::int as pending_count
-       from surveyor_contracts c where ${where} order by c.contract_code`,
+       from surveyor_contracts c where ${where} order by ${sort ? `${sort.expr} ${sort.dir}` : 'c.contract_code'}`,
       params,
     );
     const items = result.rows.map((c) => {
@@ -257,6 +274,14 @@ router.get(
     const vendor = req.query.vendor ? String(req.query.vendor) : null;
     const contract = req.query.contract ? String(req.query.contract) : null;
     const alert = req.query.alert ? String(req.query.alert) : null;
+    const minAmount = req.query.min_amount ? Number(req.query.min_amount) : null;
+    const maxAmount = req.query.max_amount ? Number(req.query.max_amount) : null;
+    const sort = sortSpec(req, {
+      invoice_no: 'si.invoice_no', vendor: 'si.vendor', amount: 'si.amount',
+      invoice_date: 'si.invoice_date', services_month: 'si.services_month',
+      tanker_name: 'si.tanker_name', approval_status: 'si.approval_status',
+      contract: 'c.contract_code', created_at: 'si.created_at',
+    });
 
     const params: unknown[] = [COMPANY(req)];
     const conds: string[] = ['si.company_id = $1'];
@@ -271,6 +296,8 @@ router.get(
     if (vendor) { n += 1; params.push(vendor); conds.push(`si.vendor = $${n}`); }
     if (contract) { n += 1; params.push(contract); conds.push(`c.contract_code = $${n}`); }
     if (alert) { n += 1; params.push(alert); conds.push(`si.alert ilike $${n}`); }
+    if (minAmount !== null && !Number.isNaN(minAmount)) { n += 1; params.push(minAmount); conds.push(`si.amount >= $${n}`); }
+    if (maxAmount !== null && !Number.isNaN(maxAmount)) { n += 1; params.push(maxAmount); conds.push(`si.amount <= $${n}`); }
     const where = conds.join(' and ');
 
     const result = await pool.query(
@@ -279,7 +306,7 @@ router.get(
        from surveyor_invoices si
        left join surveyor_contracts c on c.id = si.contract_id
        left join users u on u.id = si.approved_by
-       where ${where} order by si.created_at desc, si.invoice_no limit 1000`,
+       where ${where} order by ${sort ? `${sort.expr} ${sort.dir}` : 'si.created_at desc, si.invoice_no'} limit 1000`,
       params,
     );
     ok(res, { items: result.rows });
@@ -547,6 +574,14 @@ router.get(
     const { search } = parseSearch(req);
     const status = req.query.status ? String(req.query.status) : null;
     const vendor = req.query.vendor ? String(req.query.vendor) : null;
+    const minAmount = req.query.min_amount ? Number(req.query.min_amount) : null;
+    const maxAmount = req.query.max_amount ? Number(req.query.max_amount) : null;
+    const sort = sortSpec(req, {
+      pay_order_no: 'po.pay_order_no', vendor: 'po.vendor', amount: 'po.amount',
+      pay_method: 'po.pay_method', cheque_no: 'po.cheque_no',
+      status: 'po.status', created_at: 'po.created_at', issued_at: 'po.issued_at',
+      paid_at: 'po.paid_at',
+    });
     const params: unknown[] = [COMPANY(req)];
     const conds: string[] = ['po.company_id = $1'];
     let n = 1;
@@ -556,13 +591,15 @@ router.get(
     }
     if (status) { n += 1; params.push(status); conds.push(`po.status = $${n}`); }
     if (vendor) { n += 1; params.push(vendor); conds.push(`po.vendor = $${n}`); }
+    if (minAmount !== null && !Number.isNaN(minAmount)) { n += 1; params.push(minAmount); conds.push(`po.amount >= $${n}`); }
+    if (maxAmount !== null && !Number.isNaN(maxAmount)) { n += 1; params.push(maxAmount); conds.push(`po.amount <= $${n}`); }
     const result = await pool.query(
       `select po.*, o.name as originator_name, ap.name as approved_by_name, fp.name as finance_passed_by_name
        from pay_orders po
        left join users o on o.id = po.originator
        left join users ap on ap.id = po.approved_by
        left join users fp on fp.id = po.finance_passed_by
-       where ${conds.join(' and ')} order by po.created_at desc`,
+       where ${conds.join(' and ')} order by ${sort ? `${sort.expr} ${sort.dir}` : 'po.created_at desc'}`,
       params,
     );
     ok(res, { items: result.rows });
@@ -935,6 +972,146 @@ router.get(
       by_month: byMonth.rows.map((r) => ({ ...r, total_amount: round2(Number(r.total_amount)) })),
       by_approval: byApproval.rows.map((r) => ({ ...r, total_amount: round2(Number(r.total_amount)) })),
     });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Export (CSV / PDF) — authorized finance, audit and management roles
+// ---------------------------------------------------------------------------
+
+const EXPORT_COLUMNS: Record<string, { label: string; sql: string; format?: (v: unknown, r: any) => string }[]> = {
+  invoices: [
+    { label: 'Invoice No', sql: 'si.invoice_no' },
+    { label: 'Vendor', sql: 'si.vendor' },
+    { label: 'Contract Code', sql: 'c.contract_code' },
+    { label: 'Tanker', sql: 'si.tanker_name' },
+    { label: 'Amount', sql: 'si.amount' },
+    { label: 'Invoice Date', sql: 'si.invoice_date' },
+    { label: 'Services Month', sql: 'si.services_month' },
+    { label: 'Status', sql: 'si.approval_status' },
+    { label: 'Alert', sql: 'si.alert' },
+  ],
+  contracts: [
+    { label: 'Contract Code', sql: 'c.contract_code' },
+    { label: 'Contractor', sql: 'c.contractor' },
+    { label: 'Service Type', sql: 'c.service_type' },
+    { label: 'Contract Value', sql: 'c.contract_value' },
+    { label: 'Start Date', sql: 'c.start_date' },
+    { label: 'End Date', sql: 'c.end_date' },
+    { label: 'Status', sql: 'c.status' },
+  ],
+  'pay-orders': [
+    { label: 'Pay Order No', sql: 'po.pay_order_no' },
+    { label: 'Vendor', sql: 'po.vendor' },
+    { label: 'Pay Method', sql: 'po.pay_method' },
+    { label: 'Cheque No', sql: 'po.cheque_no' },
+    { label: 'Amount', sql: 'po.amount' },
+    { label: 'Status', sql: 'po.status' },
+    { label: 'Issued At', sql: 'po.issued_at' },
+    { label: 'Paid At', sql: 'po.paid_at' },
+  ],
+};
+
+const EXPORT_QUERY: Record<string, string> = {
+  invoices: `select si.invoice_no, si.vendor, c.contract_code, si.tanker_name, si.amount,
+                    to_char(si.invoice_date, 'YYYY-MM-DD') as invoice_date,
+                    to_char(si.services_month, 'YYYY-MM') as services_month,
+                    si.approval_status, coalesce(si.alert, '') as alert
+             from surveyor_invoices si
+             left join surveyor_contracts c on c.id = si.contract_id
+             where si.company_id = $1 order by si.invoice_no`,
+  contracts: `select c.contract_code, c.contractor, c.service_type, c.contract_value,
+                     to_char(c.start_date, 'YYYY-MM-DD') as start_date,
+                     to_char(c.end_date, 'YYYY-MM-DD') as end_date, c.status
+              from surveyor_contracts c where c.company_id = $1 order by c.contract_code`,
+  'pay-orders': `select po.pay_order_no, po.vendor, po.pay_method, coalesce(po.cheque_no, '') as cheque_no,
+                        po.amount, po.status,
+                        to_char(po.issued_at, 'YYYY-MM-DD HH24:MI') as issued_at,
+                        to_char(po.paid_at, 'YYYY-MM-DD HH24:MI') as paid_at
+                 from pay_orders po where po.company_id = $1 order by po.created_at`,
+};
+
+const exportType = (t: string | undefined): 'invoices' | 'contracts' | 'pay-orders' => {
+  if (t === 'contracts' || t === 'pay-orders') return t;
+  return 'invoices';
+};
+
+const csvCell = (v: unknown): string => {
+  if (v === null || v === undefined) return '';
+  const s = String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
+router.get(
+  '/export/csv',
+  requireRole('admin', 'director', 'accountant', 'auditor'),
+  asyncHandler(async (req: AuthRequest, res) => {
+    const type = exportType(req.query.type ? String(req.query.type) : undefined);
+    const result = await pool.query(EXPORT_QUERY[type], [COMPANY(req)]);
+    const cols = EXPORT_COLUMNS[type];
+    const header = cols.map((c) => c.label).join(',');
+    const lines = result.rows.map((r) => cols.map((c) => csvCell(r[c.label.toLowerCase().replace(/\s+/g, '_')])).join(','));
+    const csv = [header, ...lines].join('\r\n');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.attachment(`surveyors_${type}_${new Date().toISOString().slice(0, 10)}.csv`);
+    res.send(csv);
+  }),
+);
+
+router.get(
+  '/export/pdf',
+  requireRole('admin', 'director', 'accountant', 'auditor'),
+  asyncHandler(async (req: AuthRequest, res) => {
+    const type = exportType(req.query.type ? String(req.query.type) : undefined);
+    const result = await pool.query(EXPORT_QUERY[type], [COMPANY(req)]);
+    const cols = EXPORT_COLUMNS[type];
+
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const PDFDocument = require('pdfkit');
+    const doc = new PDFDocument({ margin: 36, size: 'A4' });
+    const chunks: Buffer[] = [];
+    doc.on('data', (ch: Buffer) => chunks.push(ch));
+    doc.on('end', () => {
+      res.setHeader('Content-Type', 'application/pdf');
+      res.attachment(`surveyors_${type}_${new Date().toISOString().slice(0, 10)}.pdf`);
+      res.send(Buffer.concat(chunks));
+    });
+
+    doc.fontSize(14).fillColor('#0f172a').text(`Pakistan Refinery Limited`, { align: 'center' });
+    doc.fontSize(11).fillColor('#475569').text(`Surveyor ${type === 'invoices' ? 'Invoices' : type === 'contracts' ? 'Contracts' : 'Pay Orders'} — ${new Date().toLocaleDateString()}`, { align: 'center' });
+    doc.moveDown(0.6);
+
+    const widths = cols.map((_, i) => (i === 0 ? 130 : 80));
+    const rowHeight = 18;
+    let y = doc.y;
+    const drawHeader = () => {
+      doc.rect(36, y, 523, rowHeight).fill('#1e293b');
+      let x = 36;
+      cols.forEach((c, i) => {
+        doc.fillColor('#f8fafc').fontSize(8).font('Helvetica-Bold').text(c.label, x + 4, y + 5, { width: widths[i] - 8 });
+        x += widths[i];
+      });
+      y += rowHeight;
+    };
+    const drawRow = (r: any) => {
+      doc.rect(36, y, 523, rowHeight).fill(y % (rowHeight * 2) === 0 ? '#f1f5f9' : '#ffffff');
+      let x = 36;
+      cols.forEach((c, i) => {
+        const raw = c.label.toLowerCase().replace(/\s+/g, '_');
+        const v = r[raw] ?? '';
+        const text = typeof v === 'number' ? v.toLocaleString(undefined, { maximumFractionDigits: 2 }) : String(v);
+        doc.fillColor('#0f172a').fontSize(7.5).font('Helvetica').text(text, x + 4, y + 5, { width: widths[i] - 8, ellipsis: true });
+        x += widths[i];
+      });
+      y += rowHeight;
+    };
+
+    drawHeader();
+    for (const r of result.rows) {
+      if (y > 760) { doc.addPage(); y = 36; drawHeader(); }
+      drawRow(r);
+    }
+    doc.end();
   }),
 );
 

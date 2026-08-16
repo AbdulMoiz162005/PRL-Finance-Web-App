@@ -33,6 +33,7 @@ Automated processing of surveyor service contracts and invoices with pay order g
   - approve / reject / reopen workflow with a full approval log
 - **Pay Orders (F.D. 310)** — manual pay order creation from approved invoices, plus **Auto Generate** which groups all approved un-billed invoices per vendor and creates draft pay orders with `Rupees in Words` amounts automatically
 - **Analysis** — value by vendor, service type, approval mix, monthly trend
+- **Advanced UX** — light/dark theme toggle (system-aware default), clickable column sorting, status / vendor / contract / amount-range filters, and **CSV / PDF export + print** buttons on Contracts, Invoices, Pay Orders and the Approval Log (exports restricted to finance, audit and management roles)
 
 ## Tech Stack
 
@@ -76,14 +77,14 @@ Seeded demo logins (password `Refinery@2026`):
 
 | Role        | Email                          |
 |-------------|--------------------------------|
-| Admin       | admin@meridianrefinery.ng      |
-| Director    | director@meridianrefinery.ng   |
-| Accountant  | accountant@meridianrefinery.ng |
-| Auditor     | auditor@meridianrefinery.ng    |
-| Manager     | manager@meridianrefinery.ng    |
-| Operator    | operator@meridianrefinery.ng   |
+| Admin       | admin@prl.com.pk               |
+| Director    | director@prl.com.pk            |
+| Accountant  | accountant@prl.com.pk          |
+| Auditor     | auditor@prl.com.pk             |
+| Manager     | ops@prl.com.pk                 |
+| Operator    | operator@prl.com.pk            |
 
-> Demo user emails still carry the legacy `.ng` domain; company branding has been moved to PRL (Pakistan). Update the seed users to `*@prl.com.pk` if desired.
+> All demo users belong to **Pakistan Refinery Limited (PRL)** — Korangi Creek, Karachi. Company currency is PKR.
 
 ## Surveyor Module Workflow
 

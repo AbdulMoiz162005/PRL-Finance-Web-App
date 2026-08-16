@@ -11,7 +11,7 @@ export const Spinner: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 export const Empty: React.FC<{ message?: string }> = ({ message = 'No records found' }) => (
-  <div className="flex flex-col items-center justify-center py-14 text-slate-400">
+  <div className="flex flex-col items-center justify-center py-14 text-slate-400 dark:text-slate-500">
     <Inbox className="h-10 w-10 mb-2" />
     <p className="text-sm font-medium">{message}</p>
   </div>
@@ -24,8 +24,8 @@ export const PageHeader: React.FC<{ title: string; subtitle?: string; actions?: 
 }) => (
   <div className="flex items-start justify-between gap-4 mb-5">
     <div>
-      <h1 className="text-xl font-bold text-slate-900 tracking-tight">{title}</h1>
-      {subtitle && <p className="text-sm text-slate-500 mt-0.5">{subtitle}</p>}
+      <h1 className="text-xl font-bold text-slate-900 tracking-tight dark:text-slate-100">{title}</h1>
+      {subtitle && <p className="text-sm text-slate-500 mt-0.5 dark:text-slate-400">{subtitle}</p>}
     </div>
     {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
   </div>
@@ -42,8 +42,8 @@ export const Card: React.FC<{ title?: string; subtitle?: string; children: React
     {(title || actions) && (
       <div className="flex items-start justify-between mb-4">
         <div>
-          {title && <h3 className="text-sm font-bold text-slate-900">{title}</h3>}
-          {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+          {title && <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">{title}</h3>}
+          {subtitle && <p className="text-xs text-slate-500 mt-0.5 dark:text-slate-400">{subtitle}</p>}
         </div>
         {actions}
       </div>
@@ -60,7 +60,7 @@ export const StatCard: React.FC<{ label: string; value: React.ReactNode; hint?: 
   tone = 'default',
 }) => {
   const tones = {
-    default: 'text-slate-900',
+    default: 'text-slate-900 dark:text-slate-100',
     green: 'text-emerald-600',
     red: 'text-rose-600',
     blue: 'text-brand-600',
@@ -68,11 +68,11 @@ export const StatCard: React.FC<{ label: string; value: React.ReactNode; hint?: 
   return (
     <div className="card p-4">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-        {icon && <span className="text-slate-400">{icon}</span>}
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+        {icon && <span className="text-slate-400 dark:text-slate-500">{icon}</span>}
       </div>
       <p className={clsx('mt-2 text-2xl font-bold tracking-tight', tones[tone])}>{value}</p>
-      {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
+      {hint && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{hint}</p>}
     </div>
   );
 };
@@ -90,7 +90,7 @@ export const Money: React.FC<{ value: number | string | null | undefined; curren
   const s = v < 0 ? '-' : signed ? '+' : '';
   const symbol = currency === 'USD' ? '$' : currency === 'NGN' ? '₦' : `${currency} `;
   return (
-    <span className={clsx('tabular-nums', v < 0 ? 'text-rose-600' : 'text-slate-800')}>
+    <span className={clsx('tabular-nums', v < 0 ? 'text-rose-600' : 'text-slate-800 dark:text-slate-100')}>
       {s}{symbol}{fmtNum(Math.abs(v))}
     </span>
   );
@@ -113,15 +113,15 @@ export const Modal: React.FC<{
   const sizes = { md: 'max-w-lg', lg: 'max-w-3xl', xl: 'max-w-5xl' };
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/50 p-4 sm:p-8" onClick={onClose}>
-      <div className={clsx('w-full rounded-xl bg-white shadow-pop', sizes[size])} onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3.5">
-          <h3 className="text-sm font-bold text-slate-900">{title}</h3>
-          <button onClick={onClose} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+      <div className={clsx('w-full rounded-xl bg-white shadow-pop dark:bg-slate-900 dark:border dark:border-slate-800', sizes[size])} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3.5 dark:border-slate-800">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">{title}</h3>
+          <button onClick={onClose} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300">
             <X className="h-5 w-5" />
           </button>
         </div>
         <div className="px-5 py-4">{children}</div>
-        {footer && <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3.5">{footer}</div>}
+        {footer && <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3.5 dark:border-slate-800">{footer}</div>}
       </div>
     </div>,
     document.body,
@@ -145,7 +145,7 @@ export const ConfirmDialog: React.FC<{
     }>
     <div className="flex items-start gap-3">
       <AlertTriangle className="h-6 w-6 text-amber-500 shrink-0" />
-      <p className="text-sm text-slate-600">{message}</p>
+      <p className="text-sm text-slate-600 dark:text-slate-300">{message}</p>
     </div>
   </Modal>
 );
@@ -195,7 +195,7 @@ export const DataTable: React.FC<{
   return (
     <div className="overflow-x-auto -mx-1 px-1">
       <table className="w-full text-left border-collapse">
-        <thead className="bg-slate-50 sticky top-0">
+        <thead className="bg-slate-50 sticky top-0 dark:bg-slate-900">
           <tr>
             {columns.map((c) => (
               <th key={c.key} className={clsx('th', c.align === 'right' ? 'text-right' : c.align === 'center' ? 'text-center' : '', c.className)}>
@@ -204,7 +204,7 @@ export const DataTable: React.FC<{
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
           {rows.map((row) => (
             <tr key={row[rowKey]} className={clsx('tr-hover', onRowClick && 'cursor-pointer')} onClick={() => onRowClick?.(row)}>
               {columns.map((c) => (
@@ -226,19 +226,19 @@ export const Tabs: React.FC<{
   active: string;
   onChange: (k: string) => void;
 }> = ({ tabs, active, onChange }) => (
-  <div className="flex gap-1 border-b border-slate-200 mb-4 overflow-x-auto">
+  <div className="flex gap-1 border-b border-slate-200 mb-4 dark:border-slate-800 overflow-x-auto">
     {tabs.map((t) => (
       <button
         key={t.key}
         onClick={() => onChange(t.key)}
         className={clsx(
           'whitespace-nowrap px-3.5 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors',
-          active === t.key ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700',
+          active === t.key ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',
         )}
       >
         {t.label}
         {typeof t.count === 'number' && (
-          <span className={clsx('ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold', active === t.key ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500')}>
+          <span className={clsx('ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold', active === t.key ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400')}>
             {t.count}
           </span>
         )}
