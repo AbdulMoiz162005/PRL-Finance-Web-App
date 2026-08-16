@@ -38,6 +38,7 @@ const main = async () => {
   try {
     await runSqlFile('seed.sql');
     await seedUsers();
+    await runSqlFile('surveyor_seed.sql');
     log.info('Seed complete.');
     process.exit(0);
   } catch (err) {

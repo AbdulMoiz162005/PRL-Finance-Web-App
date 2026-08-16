@@ -19,6 +19,7 @@ import { Approvals } from './pages/Approvals';
 import { Audit } from './pages/Audit';
 import { Masters } from './pages/Masters';
 import { Settings } from './pages/Settings';
+import { Surveyors } from './pages/Surveyors';
 
 const Guard: React.FC<{ children: React.ReactNode; roles?: string[] }> = ({ children, roles }) => {
   const { user, loading } = useAuth();
@@ -60,6 +61,7 @@ export const App: React.FC = () => (
         <Route path="/audit" element={page(<Audit />, ['admin', 'director', 'auditor'])} />
         <Route path="/masters" element={page(<Masters />)} />
         <Route path="/settings" element={page(<Settings />, ['admin'])} />
+        <Route path="/surveyors" element={page(<Surveyors />, ['admin', 'director', 'accountant', 'auditor', 'manager'])} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

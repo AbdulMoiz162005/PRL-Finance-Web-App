@@ -17,6 +17,7 @@ import recon from './recon';
 import approvals from './approvals';
 import reports from './reports';
 import dashboard from './dashboard';
+import surveyors from './surveyors';
 
 const router = Router();
 
@@ -40,5 +41,6 @@ router.use('/reconciliations', recon);
 router.use('/approvals', approvals);
 router.use('/reports', reports);
 router.use('/dashboard', dashboard);
+router.use('/surveyors', surveyors);
 
 export default router;

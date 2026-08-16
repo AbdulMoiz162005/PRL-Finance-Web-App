@@ -77,9 +77,10 @@ export const nextEntryNo = async (
   prefix: string,
   table: string,
   column: string,
+  client: import('pg').Pool | import('pg').PoolClient = pool,
 ): Promise<string> => {
   const year = new Date().getFullYear();
-  const res = await pool.query(
+  const res = await client.query(
     `select coalesce(max(substring(${column} from '([0-9]+)$')::int), 0) + 1 as n
      from ${table} where ${column} like $1`,
     [`${prefix}${year}-%`],

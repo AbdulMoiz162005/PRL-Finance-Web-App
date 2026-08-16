@@ -602,3 +602,115 @@ create table if not exists approval_requests (
   created_at timestamptz not null default now()
 );
 create index if not exists idx_approval_status on approval_requests (status, entity_type);
+
+-- ============================================================================
+-- Surveyor Invoice Processing & Pay Order Automation
+-- Pakistan Refinery Limited - Karachi (Korangi Creek HQ / Keamari Terminal)
+-- ---------------------------------------------------------------------------
+-- Supports: surveyor service contracts, invoice ledger, approval workflow,
+-- overbilling control, and pay order generation per PRL F.D. 310 format.
+-- ============================================================================
+
+create table if not exists surveyor_contracts (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references companies(id) on delete cascade,
+  contractor text not null,
+  service_type text not null,
+  contract_code text not null unique,
+  contract_value numeric(18,2) not null default 0,
+  start_date date,
+  end_date date,
+  status text not null default 'open',
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index if not exists uq_surveyor_contract_code on surveyor_contracts (contract_code);
+
+create table if not exists surveyor_invoices (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references companies(id) on delete cascade,
+  serial_no text,
+  contract_id uuid references surveyor_contracts(id) on delete set null,
+  invoice_no text not null,
+  invoice_date date,
+  processing_date date,
+  service_type_1 text,
+  service_type_2 text,
+  service_type_3 text,
+  tanker_name text,
+  cost_element text,
+  services_month date,
+  item_no text,
+  amount numeric(18,2) not null default 0,
+  vendor text not null,
+  validation text not null default 'Valid',
+  invoice_status text not null default 'Accepted',
+  approval_status text not null default 'Pending',
+  alert text,
+  approved_by uuid references users(id) on delete set null,
+  approved_at timestamptz,
+  approved_snapshot numeric(18,2),
+  remarks text,
+  created_by uuid references users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists idx_sinv_contract on surveyor_invoices (contract_id);
+create index if not exists idx_sinv_approval on surveyor_invoices (approval_status, vendor);
+create index if not exists idx_sinv_invoice_no on surveyor_invoices (invoice_no);
+
+create table if not exists pay_orders (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references companies(id) on delete cascade,
+  pay_order_no text not null unique,
+  vendor text not null,
+  pay_method text not null default 'cheque',
+  cheque_no text,
+  order_no text,
+  vendor_no text,
+  amount numeric(18,2) not null default 0,
+  amount_in_words text,
+  narrative text,
+  status text not null default 'draft',
+  originator uuid references users(id) on delete set null,
+  approved_by uuid references users(id) on delete set null,
+  finance_passed_by uuid references users(id) on delete set null,
+  issued_at timestamptz,
+  paid_at timestamptz,
+  remarks text,
+  created_by uuid references users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index if not exists uq_pay_order_no on pay_orders (pay_order_no);
+
+create table if not exists pay_order_lines (
+  id uuid primary key default gen_random_uuid(),
+  pay_order_id uuid not null references pay_orders(id) on delete cascade,
+  surveyor_invoice_id uuid references surveyor_invoices(id) on delete set null,
+  description text,
+  tanker_name text,
+  invoice_no text,
+  invoice_date date,
+  services_month date,
+  cargo_no text,
+  cost_center text,
+  cost_element text,
+  amount numeric(18,2) not null default 0
+);
+create index if not exists idx_pol_payorder on pay_order_lines (pay_order_id);
+
+create table if not exists surveyor_approval_logs (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references companies(id) on delete cascade,
+  contract_code text,
+  invoice_no text,
+  amount numeric(18,2),
+  prev_status text,
+  action text not null,
+  remarks text,
+  user_id uuid references users(id) on delete set null,
+  user_email text,
+  created_at timestamptz not null default now()
+);
