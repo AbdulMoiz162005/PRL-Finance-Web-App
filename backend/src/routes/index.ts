@@ -1,0 +1,44 @@
+import { Router } from 'express';
+import auth from './auth';
+import company from './company';
+import users, { auditRouter } from './users';
+import master from './master';
+import parties from './parties';
+import catalog from './catalog';
+import assets from './assets';
+import journal from './journal';
+import invoices, { purchaseRouter } from './invoices';
+import payments from './payments';
+import inventory from './inventory';
+import payroll from './payroll';
+import budgets from './budgets';
+import tax from './tax';
+import recon from './recon';
+import approvals from './approvals';
+import reports from './reports';
+import dashboard from './dashboard';
+
+const router = Router();
+
+router.use('/auth', auth);
+router.use('/settings', company);
+router.use('/users', users);
+router.use('/audit-logs', auditRouter);
+router.use('/master', master);
+router.use('/parties', parties);
+router.use('/catalog', catalog);
+router.use('/assets', assets);
+router.use('/journal-entries', journal);
+router.use('/invoices', invoices);
+router.use('/purchase-invoices', purchaseRouter);
+router.use('/payments', payments);
+router.use('/inventory', inventory);
+router.use('/payroll', payroll);
+router.use('/budgets', budgets);
+router.use('/tax', tax);
+router.use('/reconciliations', recon);
+router.use('/approvals', approvals);
+router.use('/reports', reports);
+router.use('/dashboard', dashboard);
+
+export default router;
