@@ -7,6 +7,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { api, errMsg } from '../lib/api';
 import { Badge, Card, Empty, PageHeader, Spinner, StatCard } from '../components/ui';
+import { PayOrderDoc } from '../components/PayOrderDoc';
 import { fmtDate } from '../lib/format';
 import clsx from 'clsx';
 
@@ -23,6 +24,22 @@ const downloadExport = async (fmt: 'csv' | 'pdf', type: string) => {
     const a = document.createElement('a');
     a.href = url;
     a.download = `surveyors_${type}_${new Date().toISOString().slice(0, 10)}.${fmt}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    window.alert(errMsg(e));
+  }
+};
+
+const downloadPayOrderPdf = async (p: any) => {
+  try {
+    const r = await api.get(`/surveyors/pay-orders/${p.id}/pdf`, { responseType: 'blob' });
+    const url = URL.createObjectURL(r.data as Blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Pay_Order_${p.pay_order_no || p.id}.pdf`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -758,7 +775,12 @@ const PayOrders: React.FC = () => {
                   <td className="px-4 py-2.5"><Badge status={p.status} label={p.status} /></td>
                   <td className="px-4 py-2.5 text-xs">{p.cheque_no || '—'}</td>
                   <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                    <button className="text-slate-500 dark:text-slate-400 dark:text-slate-500 hover:underline text-xs mr-2" onClick={() => viewLines(p.id)}>Lines</button>
+                    <button className="text-brand-600 hover:underline text-xs mr-2" onClick={() => viewLines(p.id)}>
+                      <Printer className="h-3.5 w-3.5 inline mr-0.5" />Print
+                    </button>
+                    <button className="text-brand-600 hover:underline text-xs mr-2" onClick={() => downloadPayOrderPdf(p)}>
+                      <FilePdf className="h-3.5 w-3.5 inline mr-0.5" />PDF
+                    </button>
                     {poStatus(p.status) === 'draft' && (
                       <button className="text-brand-600 hover:underline text-xs mr-2" disabled={!!busy} onClick={() => poAct(p.id, 'issue')}>
                         <Send className="h-3.5 w-3.5 inline mr-0.5" />Issue
@@ -847,41 +869,24 @@ const PayOrders: React.FC = () => {
       )}
 
       {detail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-start justify-between mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 print:static print:bg-white print:p-0">
+          <div className="w-full max-w-3xl rounded-xl bg-white p-6 shadow-xl dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 max-h-[90vh] overflow-y-auto pay-order-print">
+            <div className="flex items-center justify-between mb-4 no-print">
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{detail.item.pay_order_no}</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">{detail.item.amount_in_words}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">Formal Pay Order (F.D. 310) · {detail.item.amount_in_words}</p>
               </div>
               <Badge status={detail.item.status} label={detail.item.status} />
             </div>
-            <div className="text-sm text-slate-600 dark:text-slate-300 mb-4">
-              <p><span className="font-semibold">Vendor:</span> {detail.item.vendor} · <span className="font-semibold">Method:</span> {detail.item.pay_method} · <span className="font-semibold">Order:</span> {detail.item.order_no || '—'}</p>
-              {detail.item.narrative && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">{detail.item.narrative}</p>}
-            </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase bg-slate-50 dark:bg-slate-900 dark:text-slate-400 dark:text-slate-500">
-                  <th className="px-3 py-2">Description</th>
-                  <th className="px-3 py-2">Invoice</th>
-                  <th className="px-3 py-2">Tanker</th>
-                  <th className="px-3 py-2 text-right">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(detail.lines || []).map((l: any) => (
-                  <tr key={l.id} className="border-t border-slate-100 dark:border-slate-800">
-                    <td className="px-3 py-2">{l.description}</td>
-                    <td className="px-3 py-2">{l.invoice_no}</td>
-                    <td className="px-3 py-2 text-xs">{l.tanker_name || '—'}</td>
-                    <td className="px-3 py-2 text-right">{PKR(l.amount)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="mt-5 flex justify-end">
+            <PayOrderDoc item={detail.item} lines={detail.lines || []} />
+            <div className="mt-5 flex justify-end gap-2 no-print">
               <button className="btn" onClick={() => setDetail(null)}>Close</button>
+              <button className="btn" onClick={() => downloadPayOrderPdf(detail.item)}>
+                <FilePdf className="h-4 w-4" /> Download PDF
+              </button>
+              <button className="btn btn-primary" onClick={() => window.print()}>
+                <Printer className="h-4 w-4" /> Print / Save as PDF
+              </button>
             </div>
           </div>
         </div>

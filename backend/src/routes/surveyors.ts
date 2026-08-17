@@ -4,6 +4,7 @@ import { asyncHandler, ok, AppError, audit, round2, nextEntryNo } from '../utils
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth';
 import { validateBody, parseId } from '../middleware/validate';
 import { parseSearch, parseDateRange } from './parse';
+import { PRL_LOGO_B64 } from '../assets/logo';
 
 const router = Router();
 router.use(requireAuth);
@@ -625,6 +626,217 @@ router.get(
       [id],
     );
     ok(res, { item: po.rows[0], lines: lines.rows });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Individual Pay Order document (formal F.D. 310) as PDF
+// ---------------------------------------------------------------------------
+
+const formalDate = (d: string | Date | null | undefined): string => {
+  if (!d) return '';
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return String(d).slice(0, 10);
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  return `${dt.getDate()} ${months[dt.getMonth()]} ${dt.getFullYear()}`;
+};
+
+const fmtPk = (n: number | string): string => Number(n ?? 0).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const drawPayOrderPdf = async (res: Response, item: any, lines: any[], company: any) => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const PDFDocument = require('pdfkit');
+  const doc = new PDFDocument({ margin: 40, size: 'A4', bufferPages: true });
+  const chunks: Buffer[] = [];
+  doc.on('data', (ch: Buffer) => chunks.push(ch));
+  doc.on('end', () => {
+    res.setHeader('Content-Type', 'application/pdf');
+    res.attachment(`Pay_Order_${item.pay_order_no}_${new Date().toISOString().slice(0, 10)}.pdf`);
+    res.send(Buffer.concat(chunks));
+  });
+
+  const NAVY = '#2e3c8f';
+  const BLUE = '#0b74b8';
+  const GREEN = '#0b6b2d';
+  const RED = '#d71920';
+  const INK = '#0f172a';
+  const GREY = '#475569';
+  const PAGE_W = doc.page.width;
+  const W = PAGE_W - 80;
+
+  // ----- Letterhead -----
+  try {
+    doc.image(Buffer.from(PRL_LOGO_B64, 'base64'), 40, 34, { width: 120 });
+  } catch {
+    /* logo unavailable – continue with text header */
+  }
+  const logoW = 120;
+  const midX = 40 + logoW + 16;
+  const midW = 40 + W - 130 - midX;
+  doc.fillColor(NAVY).fontSize(14).font('Helvetica-Bold').text((company?.name || 'PAKISTAN REFINERY LIMITED').toUpperCase(), midX, 38, { width: midW, align: 'center' });
+  doc.fillColor(BLUE).fontSize(8.5).font('Helvetica').text((company?.legal_name || company?.name || 'PAKISTAN REFINERY LIMITED').toUpperCase(), midX, 60, { width: midW, align: 'center' });
+  doc.fillColor(INK).fontSize(8).text(company?.address || 'Korangi Creek, P.O. Box 4612, Karachi - 74900, Pakistan', midX, 74, { width: midW, align: 'center' });
+  doc.fillColor(GREY).fontSize(8).text(`Tel: ${company?.phone || '(021) 9911-0600'}   Email: ${company?.email || 'info@prl.com.pk'}`, midX, 88, { width: midW, align: 'center' });
+  doc.fillColor(GREY).fontSize(8).text(`NTN: ${company?.tax_id || 'NTN-0001234-5'}`, midX, 100, { width: midW, align: 'center' });
+  doc.moveTo(40, 118).lineTo(PAGE_W - 40, 118).lineWidth(3).strokeColor(GREEN).stroke();
+
+  // Form reference (top right corner)
+  doc.fillColor(GREY).fontSize(8).font('Helvetica').text('FORM', 40 + W - 125, 38, { width: 125, align: 'right' });
+  doc.fillColor(RED).fontSize(16).font('Helvetica-Bold').text('F.D. 310', 40 + W - 125, 48, { width: 125, align: 'right' });
+
+  // ----- Title -----
+  let y = 132;
+  doc.fillColor(INK).fontSize(9).text('', 40, y);
+  const titleW = 200;
+  const titleX = (PAGE_W - titleW) / 2;
+  doc.rect(titleX, y, titleW, 24).strokeColor(INK).lineWidth(1).stroke();
+  doc.fillColor(NAVY).fontSize(15).font('Helvetica-Bold').text('PAY ORDER', titleX, y + 6, { width: titleW, align: 'center' });
+  y += 32;
+
+  // ----- Meta row (2x2) -----
+  doc.fontSize(9).font('Helvetica');
+  const meta: [string, string][] = [
+    ['Pay Order No:', item.pay_order_no],
+    ['Date:', formalDate(item.issued_at || item.created_at)],
+    ['Serial No:', String(item.serial_no || item.pay_order_no.replace(/\D/g, '').slice(-6) || '—')],
+    ['Status:', (item.status || 'draft').toUpperCase()],
+  ];
+  doc.rect(40, y - 6, W, 32).fill('#f8fafc');
+  const metaW = W / 2;
+  meta.forEach(([k, v], i) => {
+    const cx = 40 + (i % 2) * metaW;
+    const cy = y + Math.floor(i / 2) * 16;
+    doc.fillColor(INK).font('Helvetica-Bold').text(k, cx, cy, { width: 82 });
+    doc.fillColor(GREY).font('Helvetica').text(String(v), cx + 86, cy, { width: metaW - 90 });
+  });
+  y += 32;
+
+  // ----- Payee / amount block -----
+  const fieldRow = (label: string, value: string, height = 20) => {
+    doc.font('Helvetica-Bold').fontSize(9).fillColor(INK).text(label, 40, y + 5, { width: 130 });
+    doc.lineWidth(0.7).moveTo(40 + 130, y + 16).lineTo(40 + W, y + 16).strokeColor(INK).stroke();
+    doc.font('Helvetica').fillColor(INK).fontSize(10).text(value, 40 + 135, y + 3, { width: W - 135 });
+    y += height;
+  };
+  fieldRow('PAY TO', item.vendor || '');
+  fieldRow('AMOUNT (FIGURES)', `Rs. ${fmtPk(item.amount)}`);
+  fieldRow('AMOUNT (WORDS)', (item.amount_in_words || '').toUpperCase());
+  const payVia = `${(item.pay_method || 'cheque').toUpperCase()}${item.pay_method === 'cheque' && item.cheque_no ? ` — CHEQUE NO. ${item.cheque_no}` : ''}${item.order_no ? ` — A/C REF. ${item.order_no}` : ''}`;
+  fieldRow('BY PAYMENT', payVia);
+  y += 4;
+
+  // ----- Narrative -----
+  doc.font('Helvetica-Bold').fontSize(9).fillColor(INK).text('On Account Of:', 40, y);
+  doc.font('Helvetica').fillColor(INK).fontSize(9.5).text(item.narrative || `ON ACCOUNT OF PAYMENT IN RESPECT OF SURVEYING SERVICES - ${item.vendor}`, 40 + 130, y, { width: W - 130 });
+  y += 18;
+
+  // ----- Lines table -----
+  const rows = lines && lines.length ? lines : [{ description: item.narrative || 'Surveying Services', invoice_no: '', invoice_date: null, tanker_name: '', amount: item.amount }];
+  const colX = [40, 40 + 28, 40 + 28 + 120, 40 + 28 + 120 + 90, 40 + 28 + 120 + 90 + 70, 40 + W - 100];
+  const colTitles = ['#', 'Description', 'Invoice No', 'Invoice Date', 'Tanker', 'Amount (PKR)'];
+  const colAligns: ('left' | 'right')[] = ['left', 'left', 'left', 'left', 'left', 'right'];
+  const rowH = 18;
+
+  const drawTableHeader = () => {
+    doc.rect(40, y, W, rowH).fill('#eef1fb');
+    colTitles.forEach((t, i) => {
+      doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(8).text(t.toUpperCase(), colX[i] + 3, y + 5, { width: (colX[i + 1] ?? 40 + W) - colX[i] - 6, align: colAligns[i] });
+    });
+    y += rowH;
+  };
+  const drawTableRow = (cells: (string | number)[], fill?: string) => {
+    if (fill) doc.rect(40, y, W, rowH).fill(fill);
+    cells.forEach((c, i) => {
+      const x = colX[i];
+      const w = (colX[i + 1] ?? 40 + W) - x - 6;
+      doc.fillColor(INK).font(i === 5 ? 'Helvetica-Bold' : 'Helvetica').fontSize(8.5).text(String(c), x + 3, y + 5, { width: w, align: colAligns[i] });
+    });
+    doc.moveTo(40, y).lineTo(40 + W, y).lineWidth(0.3).strokeColor('#94a3b8').stroke();
+    y += rowH;
+  };
+
+  // ensure table header + all rows fit; paginate if needed
+  const ensureSpace = (needed: number) => {
+    if (y + needed > doc.page.height - 60) {
+      doc.addPage();
+      y = 40;
+      drawTableHeader();
+    }
+  };
+
+  drawTableHeader();
+  rows.forEach((r: any, i: number) => {
+    ensureSpace(rowH);
+    drawTableRow([
+      i + 1,
+      r.description || 'Surveying Services',
+      r.invoice_no || '—',
+      formalDate(r.invoice_date) || '—',
+      r.tanker_name || '—',
+      fmtPk(r.amount ?? 0),
+    ]);
+  });
+  ensureSpace(rowH);
+  drawTableRow(['', '', '', '', 'Total Payable', fmtPk(item.amount)], '#eef1fb');
+  y += 6;
+
+  // ----- Approval chain note -----
+  ensureSpace(40);
+  doc.fillColor(GREY).font('Helvetica-Oblique').fontSize(8.5).text('Certified that the goods/services covered by the above invoices have been received and the payment is due.', 40, y, { width: W });
+  y += 12;
+  doc.font('Helvetica').fontSize(8.5).text(
+    `Approved by: ${item.approved_by_name || '__________________'}   Finance passed by: ${item.finance_passed_by_name || '__________________'}`,
+    40,
+    y,
+    { width: W },
+  );
+  y += 26;
+
+  // ----- Signatures -----
+  ensureSpace(70);
+  const sigW = (W - 20) / 3;
+  for (let i = 0; i < 3; i++) {
+    const sx = 40 + i * (sigW + 10);
+    doc.moveTo(sx, y).lineTo(sx + sigW, y).lineWidth(0.9).strokeColor(INK).stroke();
+    const labels = ['PREPARED BY', 'CHECKED BY', 'AUTHORIZED SIGNATORY'];
+    doc.fillColor(INK).font('Helvetica-Bold').fontSize(9).text(labels[i], sx, y + 5, { width: sigW, align: 'center' });
+    doc.fillColor(GREY).font('Helvetica').fontSize(7.5).text('Name / Designation / Date', sx, y + 18, { width: sigW, align: 'center' });
+  }
+  y += 44;
+
+  // ----- Footer -----
+  doc.moveTo(40, y).lineTo(40 + W, y).lineWidth(0.4).strokeColor('#cbd5e1').stroke();
+  doc.fillColor(GREY).font('Helvetica').fontSize(7.5).text(
+    `${(company?.legal_name || company?.name || 'PAKISTAN REFINERY LIMITED').toUpperCase()}  ·  ${company?.address || ''}  ·  NTN: ${company?.tax_id || 'NTN-0001234-5'}`,
+    40,
+    y + 5,
+    { width: W, align: 'center' },
+  );
+
+  doc.end();
+};
+
+router.get(
+  '/pay-orders/:id/pdf',
+  requireRole('admin', 'director', 'accountant', 'auditor'),
+  asyncHandler(async (req: AuthRequest, res) => {
+    const id = parseId(req.params.id);
+    const po = await pool.query(
+      `select po.*, o.name as originator_name, ap.name as approved_by_name, fp.name as finance_passed_by_name
+       from pay_orders po
+       left join users o on o.id = po.originator
+       left join users ap on ap.id = po.approved_by
+       left join users fp on fp.id = po.finance_passed_by
+       where po.id = $1 and po.company_id = $2`,
+      [id, COMPANY(req)],
+    );
+    if (!po.rows[0]) throw new AppError(404, 'Pay order not found');
+    const lines = await pool.query(
+      `select pl.* from pay_order_lines pl where pl.pay_order_id = $1 order by pl.id`,
+      [id],
+    );
+    const company = await pool.query('select * from companies where id = $1', [COMPANY(req)]);
+    await drawPayOrderPdf(res, po.rows[0], lines.rows, company.rows[0] ?? null);
   }),
 );
 

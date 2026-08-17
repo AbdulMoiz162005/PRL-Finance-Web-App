@@ -32,6 +32,7 @@ Automated processing of surveyor service contracts and invoices with pay order g
   - flags **Overbilling** when the contract balance is exceeded
   - approve / reject / reopen workflow with a full approval log
 - **Pay Orders (F.D. 310)** — manual pay order creation from approved invoices, plus **Auto Generate** which groups all approved un-billed invoices per vendor and creates draft pay orders with `Rupees in Words` amounts automatically
+- **Per-Pay-Order document (F.D. 310)** — every pay order can be opened as a formal printable Pay Order document (PRL letterhead, payee/amount in figures & words, payment method, invoice schedule, approval chain and signatures) via **Print**, or exported as a **PDF** (`GET /api/surveyors/pay-orders/:id/pdf`)
 - **Analysis** — value by vendor, service type, approval mix, monthly trend
 - **Advanced UX** — light/dark theme toggle (system-aware default), clickable column sorting, status / vendor / contract / amount-range filters, and **CSV / PDF export + print** buttons on Contracts, Invoices, Pay Orders and the Approval Log (exports restricted to finance, audit and management roles)
 
@@ -112,7 +113,7 @@ Auth via `POST /api/auth/login` → Bearer token.
 
 | Module | Endpoints |
 |--------|-----------|
-| Surveyors | `GET/POST/PATCH/DELETE /api/surveyors/contracts`, `.../invoices`, `.../invoices/:id/approve\|reject\|reopen`, `GET/POST /api/surveyors/pay-orders`, `POST /api/surveyors/pay-orders/auto-generate`, `POST .../:id/issue\|pay\|cancel`, `GET /api/surveyors/approval-log`, `GET /api/surveyors/dashboard`, `GET /api/surveyors/analysis` |
+| Surveyors | `GET/POST/PATCH/DELETE /api/surveyors/contracts`, `.../invoices`, `.../invoices/:id/approve\|reject\|reopen`, `GET/POST /api/surveyors/pay-orders`, `POST /api/surveyors/pay-orders/auto-generate`, `POST .../:id/issue\|pay\|cancel`, `GET .../pay-orders/:id/pdf` (formal F.D. 310 Pay Order document), `GET /api/surveyors/approval-log`, `GET /api/surveyors/dashboard`, `GET /api/surveyors/analysis` |
 | Finance    | journal entries, invoices, payments, inventory, payroll, assets, tax, reports, budgets, reconciliations, approvals, audit, masters |
 
 ## Project Structure

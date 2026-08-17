@@ -74,4 +74,40 @@
     break-inside: avoid;
     box-shadow: none !important;
   }
+  /* Force light colours for the formal Pay Order document in print, even in dark mode */
+  html.dark .pay-order-doc,
+  .pay-order-doc {
+    background: #fff !important;
+    color: #0f172a !important;
+  }
+  .pay-order-doc * {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .pay-order-doc th,
+  .pay-order-doc td {
+    color: #0f172a !important;
+  }
+  .pay-order-doc table {
+    border-collapse: collapse !important;
+  }
+  .pay-order-print {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    border-radius: 0 !important;
+  }
+  .pay-order-print > div {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
 }

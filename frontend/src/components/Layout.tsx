@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, PenLine, FileText, ArrowLeftRight, Package, Factory,
   Wallet, BadgeDollarSign, FileBarChart, ListChecks, ScrollText, Users, Settings,
-  LogOut, Fuel, Scale, Gauge, Sun, Moon,
+  LogOut, Scale, Gauge, Sun, Moon,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '../lib/auth';
@@ -64,8 +64,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-slate-950">
       <aside className="w-60 shrink-0 bg-ink-900 text-white flex flex-col">
         <div className="flex items-center gap-2.5 px-4 h-16 border-b border-white/10">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600">
-            <Fuel className="h-5 w-5 text-white" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/95 ring-1 ring-white/20">
+            <img src="/prl-logo.png" alt="PRL logo" className="h-8 w-8 object-contain" />
           </div>
           <div className="leading-tight min-w-0 flex-1">
             <p className="text-sm font-bold truncate">Pakistan Refinery Limited</p>

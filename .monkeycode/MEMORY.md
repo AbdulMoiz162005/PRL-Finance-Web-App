@@ -76,3 +76,12 @@ Entries discovered by the Agent during task execution should follow this format:
   - Backend sort/filter conventions: list endpoints accept `sort_by` (whitelisted via sortSpec map), `sort_dir`, `min_amount`/`max_amount`; adding a new sortable column requires adding it to the whitelist map in surveyors.ts.
   - Export endpoints `/api/surveyors/export/csv` and `/export/pdf` (pdfkit, server-rendered A4) support types `invoices`/`contracts`/`pay-orders` and are restricted to admin/director/accountant/auditor (403 otherwise). Frontend downloads via axios `responseType: 'blob'` and prints with `window.print()` (`.no-print` elements are hidden by the print CSS).
   - After changing tailwind.config.js or index.html, the Vite dev server must be restarted (run as a managed background terminal; port 5173).
+
+[Project Knowledge Summary]
+- Date: 2026-08-17
+- Context: Discovered by Agent while adding per-Pay-Order print/PDF export and PRL branding (v1.1.x)
+- Category: Build Methods
+- Instructions:
+  - Official PRL logo lives at frontend/public/prl-logo.png (source: https://www.prl.com.pk/wp-content/uploads/2025/03/PRL_NEW_LOGO.png); brand palette navy #2e3c8f, blue #0b74b8, emerald #0b6b2d, red #d71920 is in tailwind.config.js (brand + prl scales).
+  - Individual Pay Order documents: frontend component frontend/src/components/PayOrderDoc.tsx renders the formal F.D. 310 layout (print via .pay-order-print CSS in index.css); backend GET /api/surveyors/pay-orders/:id/pdf generates the same document with pdfkit (restricted to admin/director/accountant/auditor).
+  - When embedding a binary as a TS string constant for pdfkit doc.image(), write the base64 on a SINGLE line — adjacent quoted string-literal lines get truncated by the esbuild/tsx transform and the decoded buffer silently comes back tiny.
