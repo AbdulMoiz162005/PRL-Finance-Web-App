@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   LayoutDashboard, FileText, Scale, BadgeDollarSign, ScrollText, BarChart3,
   Plus, CheckCircle2, XCircle, RotateCcw, Send, Banknote, Ban, Search, ShieldAlert, Zap,
@@ -200,7 +201,7 @@ const Tower: React.FC = () => {
         </Card>
         <Card title="Monthly Invoice Volume" className="lg:col-span-2">
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={data.monthly}>
+            <BarChart data={data.monthly} barCategoryGap="30%">
               <defs>
                 <BarGradient id="towerBar" from="#0b6b2d" to="#0b6b2d" />
               </defs>
@@ -208,7 +209,7 @@ const Tower: React.FC = () => {
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: t.tick }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: t.tick }} axisLine={false} tickLine={false} width={60} />
               <Tooltip content={<ChartTip fmt={PKR} labelFmt={(l: any) => `Month ${l}`} />} cursor={{ fill: t.cursor }} />
-              <Bar dataKey="amount" name="Amount" fill="url(#towerBar)" radius={[5, 5, 0, 0]} maxBarSize={42} animationDuration={800} />
+              <Bar dataKey="amount" name="Amount" fill="url(#towerBar)" radius={[6, 6, 2, 2]} maxBarSize={42} animationDuration={800} style={{ filter: 'drop-shadow(0 3px 5px rgba(11,107,45,0.25))' }} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
@@ -362,9 +363,9 @@ const Contracts: React.FC = () => {
           </table>
         </div>
       )}
-      {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 max-h-[90vh] overflow-y-auto">
+      {editing && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-pop ring-1 ring-slate-900/5 dark:bg-slate-900 dark:shadow-none dark:ring-white/10 max-h-[90vh] overflow-y-auto animate-modal">
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">{editing.id ? 'Edit Contract' : 'New Surveyor Contract'}</h3>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Contract Code" value={editing.contract_code} onChange={(v) => setEditing({ ...editing, contract_code: v })} placeholder="PM-TNS-25" />
@@ -391,7 +392,8 @@ const Contracts: React.FC = () => {
               <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
@@ -585,9 +587,9 @@ const InvoiceModal: React.FC<{ value: any; contracts: any[]; vendors: string[]; 
   };
   const selectedContract = contracts.find((c) => c.contract_code === value.contract_code);
   const remaining = selectedContract ? Number(selectedContract.contract_value) - Number(selectedContract.used_amount) : null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 max-h-[90vh] overflow-y-auto">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm animate-fade-in">
+      <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-pop ring-1 ring-slate-900/5 dark:bg-slate-900 dark:shadow-none dark:ring-white/10 max-h-[90vh] overflow-y-auto animate-modal">
         <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">{value.id ? 'Edit Invoice' : 'New Surveyor Invoice'}</h3>
         <div className="grid grid-cols-3 gap-3">
           <Field label="Invoice No" value={value.invoice_no} onChange={(v) => onChange({ ...value, invoice_no: v })} />
@@ -642,7 +644,8 @@ const InvoiceModal: React.FC<{ value: any; contracts: any[]; vendors: string[]; 
           <button className="btn btn-primary" onClick={onSave}>Save</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 
@@ -822,9 +825,9 @@ const PayOrders: React.FC = () => {
         </div>
       )}
 
-      {showNew && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 max-h-[90vh] overflow-y-auto">
+      {showNew && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-pop ring-1 ring-slate-900/5 dark:bg-slate-900 dark:shadow-none dark:ring-white/10 max-h-[90vh] overflow-y-auto animate-modal">
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">New Pay Order (F.D. 310)</h3>
             <div className="grid grid-cols-3 gap-3 mb-4">
               <Field label="Vendor" value={form.vendor} onChange={(v) => setForm({ ...form, vendor: v })} />
@@ -880,12 +883,13 @@ const PayOrders: React.FC = () => {
               <button className="btn btn-primary" onClick={create}>Create Pay Order</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
-      {detail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 print:static print:bg-white print:p-0">
-          <div className="w-full max-w-3xl rounded-xl bg-white p-6 shadow-xl dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 max-h-[90vh] overflow-y-auto pay-order-print">
+      {detail && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm animate-fade-in print:static print:bg-white print:p-0">
+          <div className="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-pop ring-1 ring-slate-900/5 dark:bg-slate-900 dark:shadow-none dark:ring-white/10 max-h-[90vh] overflow-y-auto pay-order-print animate-modal">
             <div className="flex items-center justify-between mb-4 no-print">
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{detail.item.pay_order_no}</h3>
@@ -904,7 +908,8 @@ const PayOrders: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
@@ -1012,7 +1017,7 @@ const Analysis: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card title="Value by Vendor" subtitle="Total invoice value per surveyor">
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={data.by_vendor}>
+            <BarChart data={data.by_vendor} barCategoryGap="30%">
               <defs>
                 <BarGradient id="byVendor" from="#0b74b8" to="#0b74b8" />
               </defs>
@@ -1020,13 +1025,13 @@ const Analysis: React.FC = () => {
               <XAxis dataKey="vendor" tick={{ fontSize: 11, fill: t.tick }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: t.tick }} axisLine={false} tickLine={false} width={60} />
               <Tooltip content={<ChartTip fmt={PKR} />} cursor={{ fill: t.cursor }} />
-              <Bar dataKey="total_amount" name="Amount" fill="url(#byVendor)" radius={[5, 5, 0, 0]} maxBarSize={40} animationDuration={800} />
+              <Bar dataKey="total_amount" name="Amount" fill="url(#byVendor)" radius={[6, 6, 2, 2]} maxBarSize={40} animationDuration={800} style={{ filter: 'drop-shadow(0 3px 5px rgba(11,116,184,0.25))' }} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
         <Card title="Value by Service Type" subtitle="Split by service_type_3">
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={data.by_service} layout="vertical" margin={{ left: 10, right: 10 }}>
+            <BarChart data={data.by_service} layout="vertical" margin={{ left: 10, right: 10 }} barCategoryGap="30%">
               <defs>
                 <BarGradient id="byService" from="#1d4ed8" to="#1d4ed8" />
               </defs>
@@ -1034,7 +1039,7 @@ const Analysis: React.FC = () => {
               <XAxis type="number" tick={{ fontSize: 11, fill: t.tick }} axisLine={false} tickLine={false} />
               <YAxis type="category" dataKey="service" width={140} tick={{ fontSize: 10, fill: t.tick }} axisLine={false} tickLine={false} />
               <Tooltip content={<ChartTip fmt={PKR} />} cursor={{ fill: t.cursor }} />
-              <Bar dataKey="total_amount" name="Amount" fill="url(#byService)" radius={[0, 5, 5, 0]} maxBarSize={22} animationDuration={800} />
+              <Bar dataKey="total_amount" name="Amount" fill="url(#byService)" radius={[0, 6, 6, 0]} maxBarSize={22} animationDuration={800} style={{ filter: 'drop-shadow(0 2px 4px rgba(29,78,216,0.25))' }} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
@@ -1051,7 +1056,7 @@ const Analysis: React.FC = () => {
         </Card>
         <Card title="Monthly Trend">
           <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={data.by_month}>
+            <BarChart data={data.by_month} barCategoryGap="30%">
               <defs>
                 <BarGradient id="byMonth" from="#c9a227" to="#c9a227" />
               </defs>
@@ -1059,7 +1064,7 @@ const Analysis: React.FC = () => {
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: t.tick }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: t.tick }} axisLine={false} tickLine={false} width={60} />
               <Tooltip content={<ChartTip fmt={PKR} />} cursor={{ fill: t.cursor }} />
-              <Bar dataKey="total_amount" name="Amount" fill="url(#byMonth)" radius={[5, 5, 0, 0]} maxBarSize={42} animationDuration={800} />
+              <Bar dataKey="total_amount" name="Amount" fill="url(#byMonth)" radius={[6, 6, 2, 2]} maxBarSize={42} animationDuration={800} style={{ filter: 'drop-shadow(0 3px 5px rgba(201,162,39,0.25))' }} />
             </BarChart>
           </ResponsiveContainer>
         </Card>

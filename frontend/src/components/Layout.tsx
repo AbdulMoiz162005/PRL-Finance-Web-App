@@ -72,8 +72,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-slate-950">
       <aside className="w-60 shrink-0 bg-ink-900 text-white flex flex-col">
         <div className="flex items-center gap-2.5 px-4 h-16 border-b border-white/10">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/95 ring-1 ring-white/20">
-            <img src="/prl-logo.png" alt="PRL logo" className="h-8 w-8 object-contain" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/95 shadow-lg shadow-black/20 ring-1 ring-white/20">
+            <img src="/prl-logo.png" alt="PRL logo" className="h-7 w-7 object-contain" />
           </div>
           <div className="leading-tight min-w-0 flex-1">
             <p className="text-sm font-bold truncate">Pakistan Refinery Limited</p>
@@ -82,7 +82,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           <button
             onClick={toggleTheme}
             title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-            className="rounded-md p-1.5 text-slate-400 hover:bg-white/10 hover:text-white"
+            className="rounded-lg p-1.5 text-slate-400 transition-all duration-200 hover:bg-white/10 hover:text-white"
           >
             {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
@@ -95,11 +95,19 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               end={i.to === '/'}
               className={({ isActive }) =>
                 clsx(
-                  'flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors',
-                  isActive ? 'bg-brand-600 text-white' : 'text-slate-300 hover:bg-white/10 hover:text-white',
+                  'group relative flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-medium transition-all duration-200',
+                  isActive
+                    ? 'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-lg shadow-brand-900/40'
+                    : 'text-slate-300 hover:bg-white/10 hover:text-white',
                 )
               }
             >
+              <span
+                className={clsx(
+                  'absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-white/90 transition-opacity',
+                  location.pathname === i.to || (i.to !== '/' && location.pathname.startsWith(i.to)) ? 'opacity-100' : 'opacity-0',
+                )}
+              />
               {i.icon}
               {i.label}
             </NavLink>
@@ -107,14 +115,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </nav>
         <div className="border-t border-white/10 p-3.5">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-500 font-bold text-sm">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 font-bold text-sm shadow-md shadow-black/30">
               {(user?.name || '?').slice(0, 2).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1 leading-tight">
               <p className="truncate text-xs font-semibold">{user?.name}</p>
               <p className="truncate text-[10px] text-slate-400">{user ? ROLE_LABEL[user.role] || user.role : ''}</p>
             </div>
-            <button onClick={doLogout} title="Sign out" className="rounded-md p-1.5 text-slate-400 hover:bg-white/10 hover:text-white">
+            <button onClick={doLogout} title="Sign out" className="rounded-lg p-1.5 text-slate-400 transition-all duration-200 hover:bg-white/10 hover:text-white">
               <LogOut className="h-4 w-4" />
             </button>
           </div>

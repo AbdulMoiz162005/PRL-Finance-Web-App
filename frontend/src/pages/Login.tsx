@@ -38,12 +38,13 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-brand-900 via-brand-800 to-brand-600 p-4">
-      <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-brand-500/30 blur-3xl animate-pulse-soft" />
-      <div className="pointer-events-none absolute -bottom-28 -right-20 h-80 w-80 rounded-full bg-prl-blue/25 blur-3xl animate-pulse-soft" style={{ animationDelay: '1s' }} />
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#0a0f1e] via-[#12173a] to-brand-900 p-4">
+      <div className="pointer-events-none absolute -top-24 -left-24 h-80 w-80 rounded-full bg-indigo-500/25 blur-3xl animate-pulse-soft" />
+      <div className="pointer-events-none absolute -bottom-28 -right-20 h-96 w-96 rounded-full bg-prl-blue/20 blur-3xl animate-pulse-soft" style={{ animationDelay: '1s' }} />
+      <div className="pointer-events-none absolute top-1/3 right-1/4 h-64 w-64 rounded-full bg-violet-500/15 blur-3xl animate-pulse-soft" style={{ animationDelay: '2s' }} />
       <div className="relative w-full max-w-md">
         <div className="mb-6 flex items-center justify-center gap-3 animate-fade-in-up">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20 animate-pulse-soft">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20 backdrop-blur animate-pulse-soft">
             <Fuel className="h-7 w-7 text-white" />
           </div>
           <div className="text-white">
@@ -52,7 +53,7 @@ export const Login: React.FC = () => {
           </div>
         </div>
 
-        <div className="rounded-2xl bg-white p-6 shadow-2xl animate-fade-in-up dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800" style={{ animationDelay: '80ms' }}>
+        <div className="rounded-2xl bg-white/85 p-6 shadow-2xl backdrop-blur-xl ring-1 ring-white/40 animate-fade-in-up dark:bg-slate-900/75 dark:shadow-none dark:ring-white/10" style={{ animationDelay: '80ms' }}>
           <h2 className="mb-1 text-lg font-bold text-slate-900 dark:text-slate-100">Sign in</h2>
           <p className="mb-5 text-sm text-slate-500 dark:text-slate-400">Use your role-specific credentials</p>
           <form onSubmit={submit} className="space-y-3">

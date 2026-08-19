@@ -32,6 +32,15 @@ Entries discovered by the Agent during task execution should follow this format:
 ## Entries
 
 [Project Knowledge Summary]
+- Date: 2026-08-19
+- Context: Discovered by Agent while fixing modal alignment bugs and applying the UI/UX refresh
+- Category: Troubleshooting & Debugging
+- Instructions:
+  - A `transform` on an ancestor (e.g. a retained translateY from an entrance animation with `animation-fill-mode: both`) makes that ancestor the containing block for `position: fixed` descendants, breaking modal centering (forms render half-visible or clipped inside the content column). Page-entrance wrappers must be opacity-only fades, and any modal overlay must be rendered via `createPortal(..., document.body)` (see frontend/src/pages/Surveyors.tsx).
+  - Shared chart theming lives in frontend/src/components/charts.tsx (`useChartTheme` via MutationObserver on <html> class, `ChartTip` glass tooltip, `BarGradient`/`AreaGradient`, `PIE_COLORS`); new recharts usages should consume it instead of hardcoding grid/tick colors.
+  - `CountUp` (frontend/src/components/ui.tsx) animates numeric StatCard values and respects `prefers-reduced-motion`.
+
+[Project Knowledge Summary]
 - Date: 2026-08-16
 - Context: Discovered by Agent while pulling and verifying the PRL-Finance-Web-App repository
 - Category: Build Methods

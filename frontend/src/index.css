@@ -13,8 +13,17 @@
     width: 8px;
     height: 8px;
   }
+  *::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
   *::-webkit-scrollbar-thumb {
-    @apply bg-slate-300 rounded-full dark:bg-slate-600;
+    @apply bg-slate-300 rounded-full dark:bg-slate-700;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400 dark:bg-slate-600;
+    background-clip: padding-box;
   }
 }
 
@@ -44,14 +53,28 @@
   from { background-position: -400px 0; }
   to { background-position: 400px 0; }
 }
+@keyframes modal-pop {
+  from { opacity: 0; transform: scale(0.96) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes aurora-drift {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(30px, 24px) scale(1.12); }
+}
 
 .animate-fade-in { animation: fade-in 0.4s ease both; }
 .animate-fade-in-up { animation: fade-in-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
 .animate-slide-in-right { animation: slide-in-right 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
 .animate-pulse-soft { animation: pulse-soft 2s ease-in-out infinite; }
+.animate-modal { animation: modal-pop 0.28s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
 /* page-level enter transition (keyed by route in Layout) */
-.page-enter { animation: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+/* NOTE: must NOT apply transform — a retained transform makes this div the
+   containing block for position:fixed descendants (inline modals) and breaks
+   their centering. Opacity-only is safe. */
+.page-enter {
+  animation: fade-in 0.45s ease both;
+}
 
 /* route-change progress bar */
 .route-bar {
@@ -61,13 +84,14 @@
   right: 0;
   height: 3px;
   z-index: 60;
-  background: rgba(46, 60, 143, 0.15);
+  background: rgba(46, 60, 143, 0.12);
   overflow: hidden;
   pointer-events: none;
 }
 .route-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #2e3c8f, #5f7bd0, #2e3c8f);
+  background: linear-gradient(90deg, #2e3c8f, #5f7bd0, #8fa4e1);
+  box-shadow: 0 0 10px rgba(95, 123, 208, 0.6);
   animation: route-fill 0.6s cubic-bezier(0.65, 0, 0.35, 1) forwards;
 }
 
@@ -92,10 +116,13 @@
 
 @layer components {
   .card {
-    @apply bg-white rounded-xl shadow-card border border-slate-200 dark:bg-slate-900 dark:border-slate-800 dark:shadow-none;
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-card dark:border-white/10 dark:bg-slate-900/70 dark:shadow-none dark:backdrop-blur;
   }
   .card-hover {
-    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-pop hover:border-brand-200 dark:hover:border-brand-800;
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-pop hover:border-brand-200 dark:hover:border-brand-800/60;
+  }
+  .glass {
+    @apply bg-white/75 backdrop-blur-xl ring-1 ring-slate-200/70 dark:bg-slate-900/60 dark:ring-white/10;
   }
   .input {
     @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 transition-shadow;
@@ -111,12 +138,16 @@
   }
   .btn-primary {
     @apply btn bg-brand-600 text-white hover:bg-brand-700 focus:ring-brand-500;
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 60%);
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.25), inset 0 1px 0 rgb(255 255 255 / 0.15);
   }
   .btn-secondary {
     @apply btn bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 focus:ring-slate-400 dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-800;
   }
   .btn-danger {
     @apply btn bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-500;
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 60%);
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.2), inset 0 1px 0 rgb(255 255 255 / 0.15);
   }
   .btn-ghost {
     @apply btn text-slate-600 hover:bg-slate-100 focus:ring-slate-300 dark:text-slate-300 dark:hover:bg-slate-800;
@@ -133,6 +164,21 @@
   .badge {
     @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset;
   }
+}
+
+/* frosted chart tooltip (recharts renders an HTML node, so blur applies) */
+.chart-tip {
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 12px 32px -8px rgb(15 23 42 / 0.28);
+}
+.dark .chart-tip {
+  background: rgba(15, 23, 42, 0.82);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 @media print {

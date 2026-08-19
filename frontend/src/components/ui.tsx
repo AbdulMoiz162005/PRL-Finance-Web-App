@@ -6,9 +6,18 @@ import { statusColor, statusLabel, fmtNum } from '../lib/format';
 
 export const Spinner: React.FC<{ className?: string; label?: string }> = ({ className, label = 'Loading…' }) => (
   <div className={clsx('flex flex-col items-center justify-center py-14', className)}>
-    <div className="relative h-9 w-9">
-      <div className="absolute inset-0 rounded-full border-2 border-brand-100 dark:border-brand-900" />
-      <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-brand-600 animate-spin" />
+    <div className="relative h-10 w-10">
+      <svg className="h-10 w-10 animate-spin" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.12" strokeWidth="3.5" className="text-slate-300 dark:text-slate-700" />
+        <path d="M12 2a10 10 0 0 1 10 10" stroke="url(#spinGrad)" strokeWidth="3.5" strokeLinecap="round" />
+        <defs>
+          <linearGradient id="spinGrad" x1="0" y1="0" x2="24" y2="24">
+            <stop stopColor="#2e3c8f" />
+            <stop offset="1" stopColor="#5f7bd0" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="pointer-events-none absolute inset-1 rounded-full bg-brand-500/20 blur-md" />
     </div>
     <p className="mt-3 text-xs font-medium text-slate-400 animate-pulse-soft">{label}</p>
   </div>
@@ -107,19 +116,20 @@ export const StatCard: React.FC<{ label: string; value: React.ReactNode; hint?: 
   tone = 'default',
 }) => {
   const tones = {
-    default: 'text-slate-900 dark:text-slate-100',
-    green: 'text-emerald-600',
-    red: 'text-rose-600',
-    blue: 'text-brand-600',
+    default: { chip: 'bg-slate-500/10 text-slate-500 dark:text-slate-300', value: 'text-slate-900 dark:text-slate-100' },
+    green: { chip: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', value: 'text-emerald-600 dark:text-emerald-400' },
+    red: { chip: 'bg-rose-500/10 text-rose-600 dark:text-rose-400', value: 'text-rose-600 dark:text-rose-400' },
+    blue: { chip: 'bg-brand-500/10 text-brand-600 dark:text-brand-400', value: 'text-brand-700 dark:text-brand-400' },
   };
   return (
-    <div className="card card-hover p-4">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
-        {icon && <span className="text-slate-400 dark:text-slate-500">{icon}</span>}
+    <div className="card card-hover relative overflow-hidden p-4">
+      <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-brand-500/5 blur-2xl dark:bg-brand-500/10" />
+      <div className="relative flex items-center justify-between">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</p>
+        {icon && <span className={clsx('flex h-8 w-8 items-center justify-center rounded-lg', tones[tone].chip)}>{icon}</span>}
       </div>
-      <p className={clsx('mt-2 text-2xl font-bold tracking-tight tabular-nums', tones[tone])}>{value}</p>
-      {hint && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{hint}</p>}
+      <p className={clsx('relative mt-2 text-2xl font-bold tracking-tight tabular-nums', tones[tone].value)}>{value}</p>
+      {hint && <p className="relative mt-1 text-xs text-slate-500 dark:text-slate-400">{hint}</p>}
     </div>
   );
 };
@@ -159,16 +169,16 @@ export const Modal: React.FC<{
   if (!open) return null;
   const sizes = { md: 'max-w-lg', lg: 'max-w-3xl', xl: 'max-w-5xl' };
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/50 p-4 sm:p-8" onClick={onClose}>
-      <div className={clsx('w-full rounded-xl bg-white shadow-pop dark:bg-slate-900 dark:border dark:border-slate-800', sizes[size])} onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3.5 dark:border-slate-800">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm animate-fade-in sm:p-8" onClick={onClose}>
+      <div className={clsx('w-full rounded-2xl bg-white shadow-pop ring-1 ring-slate-900/5 animate-modal dark:bg-slate-900 dark:ring-white/10', sizes[size])} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-slate-200/80 px-5 py-3.5 dark:border-slate-800">
           <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">{title}</h3>
-          <button onClick={onClose} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300">
+          <button onClick={onClose} className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300">
             <X className="h-5 w-5" />
           </button>
         </div>
         <div className="px-5 py-4">{children}</div>
-        {footer && <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3.5 dark:border-slate-800">{footer}</div>}
+        {footer && <div className="flex items-center justify-end gap-2 border-t border-slate-200/80 px-5 py-3.5 dark:border-slate-800">{footer}</div>}
       </div>
     </div>,
     document.body,

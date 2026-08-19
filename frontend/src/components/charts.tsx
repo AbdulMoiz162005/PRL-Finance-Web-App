@@ -42,10 +42,7 @@ export const ChartTip: React.FC<{
   const t = useChartTheme();
   if (!active || !payload?.length) return null;
   return (
-    <div
-      className="rounded-lg px-3 py-2 text-xs shadow-lg ring-1"
-      style={{ background: t.tooltipBg, borderColor: t.tooltipBorder, color: t.tooltipText }}
-    >
+    <div className="chart-tip" style={{ color: t.tooltipText }}>
       {label !== undefined && label !== '' && (
         <p className="mb-1.5 font-bold">{labelFmt ? labelFmt(label) : String(label)}</p>
       )}

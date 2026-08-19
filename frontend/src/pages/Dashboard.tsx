@@ -100,9 +100,9 @@ export const Dashboard: React.FC = () => {
                 <XAxis dataKey="month" tick={{ fontSize: 12, fill: t.tick }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: t.tick }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={44} />
                 <Tooltip content={<ChartTip fmt={(v) => `$${fmtNum(v)}`} />} cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }} />
-                <Legend wrapperStyle={{ fontSize: 12, paddingTop: 4 }} iconType="circle" iconSize={8} />
-                <Area type="monotone" dataKey="revenue" stroke="#16a34a" fill="url(#gRev)" name="Revenue" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} animationDuration={900} />
-                <Area type="monotone" dataKey="expense" stroke="#dc2626" fill="url(#gExp)" name="Expenses" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} animationDuration={900} />
+                <Legend wrapperStyle={{ fontSize: 12, paddingTop: 6 }} iconType="circle" iconSize={8} />
+                <Area type="monotone" dataKey="revenue" stroke="#16a34a" fill="url(#gRev)" name="Revenue" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} animationDuration={900} style={{ filter: 'drop-shadow(0 3px 5px rgba(22,163,74,0.25))' }} />
+                <Area type="monotone" dataKey="expense" stroke="#dc2626" fill="url(#gExp)" name="Expenses" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} animationDuration={900} style={{ filter: 'drop-shadow(0 3px 5px rgba(220,38,38,0.22))' }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
