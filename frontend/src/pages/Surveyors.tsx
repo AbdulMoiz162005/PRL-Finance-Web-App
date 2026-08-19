@@ -4,15 +4,18 @@ import {
   Plus, CheckCircle2, XCircle, RotateCcw, Send, Banknote, Ban, Search, ShieldAlert, Zap,
   ChevronsUpDown, ArrowUp, ArrowDown, FileDown, FileType2 as FilePdf, Printer,
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { api, errMsg } from '../lib/api';
-import { Badge, Card, Empty, PageHeader, Spinner, StatCard } from '../components/ui';
+import { Badge, Card, CountUp, Empty, PageHeader, Spinner, StatCard } from '../components/ui';
+import { BarGradient, ChartTip, PIE_COLORS, useChartTheme } from '../components/charts';
 import { PayOrderDoc } from '../components/PayOrderDoc';
-import { fmtDate } from '../lib/format';
+import { fmtDate, fmtNum } from '../lib/format';
 import clsx from 'clsx';
 
 const PKR = (n: number | string | null | undefined): string =>
   `Rs ${Number(n ?? 0).toLocaleString('en-PK', { maximumFractionDigits: 2 })}`;
+
+const pkCount = (n: number) => `Rs ${Number(n).toLocaleString('en-PK', { maximumFractionDigits: 2 })}`;
 
 const invStatus = (s?: string | null) => s?.toLowerCase() || 'pending';
 const poStatus = (s?: string | null) => s?.toLowerCase() || 'draft';
@@ -101,8 +104,6 @@ const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
   { key: 'analysis', label: 'Analysis', icon: <BarChart3 className="h-4 w-4" /> },
 ];
 
-const PIE_COLORS = ['#0f766e', '#b45309', '#1d4ed8', '#be123c', '#6d28d9', '#0e7490'];
-
 export const Surveyors: React.FC = () => {
   const [tab, setTab] = useState<Tab>('tower');
 
@@ -127,12 +128,14 @@ export const Surveyors: React.FC = () => {
           </button>
         ))}
       </div>
-      {tab === 'tower' && <Tower />}
-      {tab === 'contracts' && <Contracts />}
-      {tab === 'invoices' && <InvoicesTab />}
-      {tab === 'payorders' && <PayOrders />}
-      {tab === 'log' && <ApprovalLog />}
-      {tab === 'analysis' && <Analysis />}
+      <div key={tab} className="animate-fade-in">
+        {tab === 'tower' && <Tower />}
+        {tab === 'contracts' && <Contracts />}
+        {tab === 'invoices' && <InvoicesTab />}
+        {tab === 'payorders' && <PayOrders />}
+        {tab === 'log' && <ApprovalLog />}
+        {tab === 'analysis' && <Analysis />}
+      </div>
     </div>
   );
 };
@@ -142,22 +145,31 @@ export const Surveyors: React.FC = () => {
 const Tower: React.FC = () => {
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState('');
+  const t = useChartTheme();
 
   useEffect(() => {
     api.get('/surveyors/dashboard').then((r) => setData(r.data)).catch((e) => setError(errMsg(e)));
   }, []);
 
   if (error) return <div className="rounded-lg bg-rose-50 p-4 text-sm text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">{error}</div>;
-  if (!data) return <Spinner />;
+  if (!data) return <Spinner label="Loading surveyor control tower…" />;
   const s = data.summary;
 
   return (
     <div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        <StatCard label="Total Invoices" value={s.total_invoices} icon={<FileText className="h-4 w-4" />} hint={`${s.pending_count} pending`} />
-        <StatCard label="Invoice Value" value={PKR(s.total_amount)} icon={<BadgeDollarSign className="h-4 w-4" />} tone="blue" hint={`Approved ${PKR(s.approved_amount)}`} />
-        <StatCard label="Pending Approval" value={PKR(s.pending_amount)} icon={<ShieldAlert className="h-4 w-4" />} tone={s.pending_count > 0 ? 'red' : 'green'} hint={`${s.pending_count} invoices to review`} />
-        <StatCard label="Contract Coverage" value={PKR(s.contract_value)} icon={<Scale className="h-4 w-4" />} hint={`${s.open_contracts} open · consumed ${PKR(s.contract_consumed)}`} />
+        <div className="animate-fade-in-up" style={{ animationDelay: '0ms' }}>
+          <StatCard label="Total Invoices" value={<CountUp value={Number(s.total_invoices)} formatter={(n) => fmtNum(n, 0)} />} icon={<FileText className="h-4 w-4" />} hint={`${s.pending_count} pending`} />
+        </div>
+        <div className="animate-fade-in-up" style={{ animationDelay: '60ms' }}>
+          <StatCard label="Invoice Value" value={<CountUp value={Number(s.total_amount)} formatter={pkCount} />} icon={<BadgeDollarSign className="h-4 w-4" />} tone="blue" hint={`Approved ${PKR(s.approved_amount)}`} />
+        </div>
+        <div className="animate-fade-in-up" style={{ animationDelay: '120ms' }}>
+          <StatCard label="Pending Approval" value={<CountUp value={Number(s.pending_amount)} formatter={pkCount} />} icon={<ShieldAlert className="h-4 w-4" />} tone={s.pending_count > 0 ? 'red' : 'green'} hint={`${s.pending_count} invoices to review`} />
+        </div>
+        <div className="animate-fade-in-up" style={{ animationDelay: '180ms' }}>
+          <StatCard label="Contract Coverage" value={<CountUp value={Number(s.contract_value)} formatter={pkCount} />} icon={<Scale className="h-4 w-4" />} hint={`${s.open_contracts} open · consumed ${PKR(s.contract_consumed)}`} />
+        </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card title="Vendors" subtitle="Invoice volumes per surveyor" className="lg:col-span-1">
@@ -189,11 +201,14 @@ const Tower: React.FC = () => {
         <Card title="Monthly Invoice Volume" className="lg:col-span-2">
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={data.monthly}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v: any) => PKR(v)} labelFormatter={(l: any) => `Month ${l}`} />
-              <Bar dataKey="amount" name="Amount" fill="#0f766e" radius={[4, 4, 0, 0]} />
+              <defs>
+                <BarGradient id="towerBar" from="#0b6b2d" to="#0b6b2d" />
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={t.grid} />
+              <XAxis dataKey="month" tick={{ fontSize: 11, fill: t.tick }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: t.tick }} axisLine={false} tickLine={false} width={60} />
+              <Tooltip content={<ChartTip fmt={PKR} labelFmt={(l: any) => `Month ${l}`} />} cursor={{ fill: t.cursor }} />
+              <Bar dataKey="amount" name="Amount" fill="url(#towerBar)" radius={[5, 5, 0, 0]} maxBarSize={42} animationDuration={800} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
@@ -956,13 +971,14 @@ const ApprovalLog: React.FC = () => {
 const Analysis: React.FC = () => {
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState('');
+  const t = useChartTheme();
 
   useEffect(() => {
     api.get('/surveyors/analysis').then((r) => setData(r.data)).catch((e) => setError(errMsg(e)));
   }, []);
 
   if (error) return <div className="rounded-lg bg-rose-50 p-4 text-sm text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">{error}</div>;
-  if (!data) return <Spinner />;
+  if (!data) return <Spinner label="Crunching surveyor analysis…" />;
 
   const byApprovalRows = data.by_approval || [];
   const countOf = (s: string) => Number((byApprovalRows.find((r: any) => r.approval_status === s) || {}).invoice_count ?? 0);
@@ -980,52 +996,70 @@ const Analysis: React.FC = () => {
   return (
     <div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        <StatCard label="Invoice Value" value={PKR(totalValue)} icon={<BarChart3 className="h-4 w-4" />} hint={`${totalCount} invoices`} />
-        <StatCard label="Avg Invoice" value={PKR(totalCount ? totalValue / totalCount : 0)} icon={<BadgeDollarSign className="h-4 w-4" />} tone="blue" />
-        <StatCard label="Pending Value" value={PKR(pendingValue)} icon={<ShieldAlert className="h-4 w-4" />} tone="red" hint="Awaiting approval" />
-        <StatCard label="Approved Mix" value={`${countOf('Approved')} / ${totalCount}`} icon={<CheckCircle2 className="h-4 w-4" />} tone="green" hint="approved invoices" />
+        <div className="animate-fade-in-up" style={{ animationDelay: '0ms' }}>
+          <StatCard label="Invoice Value" value={<CountUp value={totalValue} formatter={pkCount} />} icon={<BarChart3 className="h-4 w-4" />} hint={`${totalCount} invoices`} />
+        </div>
+        <div className="animate-fade-in-up" style={{ animationDelay: '60ms' }}>
+          <StatCard label="Avg Invoice" value={<CountUp value={totalCount ? totalValue / totalCount : 0} formatter={pkCount} />} icon={<BadgeDollarSign className="h-4 w-4" />} tone="blue" />
+        </div>
+        <div className="animate-fade-in-up" style={{ animationDelay: '120ms' }}>
+          <StatCard label="Pending Value" value={<CountUp value={pendingValue} formatter={pkCount} />} icon={<ShieldAlert className="h-4 w-4" />} tone="red" hint="Awaiting approval" />
+        </div>
+        <div className="animate-fade-in-up" style={{ animationDelay: '180ms' }}>
+          <StatCard label="Approved Mix" value={<CountUp value={countOf('Approved')} formatter={(n) => `${fmtNum(n, 0)} / ${totalCount}`} />} icon={<CheckCircle2 className="h-4 w-4" />} tone="green" hint="approved invoices" />
+        </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card title="Value by Vendor" subtitle="Total invoice value per surveyor">
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={data.by_vendor}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="vendor" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v: any) => PKR(v)} />
-              <Bar dataKey="total_amount" name="Amount" fill="#0f766e" radius={[4, 4, 0, 0]} />
+              <defs>
+                <BarGradient id="byVendor" from="#0b74b8" to="#0b74b8" />
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={t.grid} />
+              <XAxis dataKey="vendor" tick={{ fontSize: 11, fill: t.tick }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: t.tick }} axisLine={false} tickLine={false} width={60} />
+              <Tooltip content={<ChartTip fmt={PKR} />} cursor={{ fill: t.cursor }} />
+              <Bar dataKey="total_amount" name="Amount" fill="url(#byVendor)" radius={[5, 5, 0, 0]} maxBarSize={40} animationDuration={800} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
         <Card title="Value by Service Type" subtitle="Split by service_type_3">
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={data.by_service} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 11 }} />
-              <YAxis type="category" dataKey="service" width={140} tick={{ fontSize: 10 }} />
-              <Tooltip formatter={(v: any) => PKR(v)} />
-              <Bar dataKey="total_amount" name="Amount" fill="#1d4ed8" radius={[0, 4, 4, 0]} />
+            <BarChart data={data.by_service} layout="vertical" margin={{ left: 10, right: 10 }}>
+              <defs>
+                <BarGradient id="byService" from="#1d4ed8" to="#1d4ed8" />
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={t.grid} />
+              <XAxis type="number" tick={{ fontSize: 11, fill: t.tick }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="service" width={140} tick={{ fontSize: 10, fill: t.tick }} axisLine={false} tickLine={false} />
+              <Tooltip content={<ChartTip fmt={PKR} />} cursor={{ fill: t.cursor }} />
+              <Bar dataKey="total_amount" name="Amount" fill="url(#byService)" radius={[0, 5, 5, 0]} maxBarSize={22} animationDuration={800} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
         <Card title="Approval Mix">
-          <ResponsiveContainer width="100%" height={240}>
+          <ResponsiveContainer width="100%" height={250}>
             <PieChart>
-              <Pie data={byApproval} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} label>
+              <Pie data={byApproval} dataKey="value" nameKey="name" innerRadius={58} outerRadius={92} paddingAngle={3} stroke={t.dark ? '#0f172a' : '#ffffff'} strokeWidth={2} label={({ name, value }: any) => `${name} ${value}`} labelLine={false} animationDuration={800}>
                 {byApproval.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
               </Pie>
-              <Tooltip />
+              <Tooltip content={<ChartTip fmt={(v) => `${v} invoices`} />} />
+              <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" iconSize={8} />
             </PieChart>
           </ResponsiveContainer>
         </Card>
         <Card title="Monthly Trend">
-          <ResponsiveContainer width="100%" height={240}>
+          <ResponsiveContainer width="100%" height={250}>
             <BarChart data={data.by_month}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v: any) => PKR(v)} />
-              <Bar dataKey="total_amount" name="Amount" fill="#b45309" radius={[4, 4, 0, 0]} />
+              <defs>
+                <BarGradient id="byMonth" from="#c9a227" to="#c9a227" />
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={t.grid} />
+              <XAxis dataKey="month" tick={{ fontSize: 11, fill: t.tick }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: t.tick }} axisLine={false} tickLine={false} width={60} />
+              <Tooltip content={<ChartTip fmt={PKR} />} cursor={{ fill: t.cursor }} />
+              <Bar dataKey="total_amount" name="Amount" fill="url(#byMonth)" radius={[5, 5, 0, 0]} maxBarSize={42} animationDuration={800} />
             </BarChart>
           </ResponsiveContainer>
         </Card>

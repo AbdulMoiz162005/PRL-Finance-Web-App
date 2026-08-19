@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, PenLine, FileText, ArrowLeftRight, Package, Factory,
   Wallet, BadgeDollarSign, FileBarChart, ListChecks, ScrollText, Users, Settings,
@@ -39,7 +39,15 @@ const NAV: NavItem[] = [
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const items = NAV.filter((i) => !user || i.roles.includes(user.role));
+
+  const [navigating, setNavigating] = useState(false);
+  useEffect(() => {
+    setNavigating(true);
+    const t = window.setTimeout(() => setNavigating(false), 500);
+    return () => window.clearTimeout(t);
+  }, [location.pathname]);
 
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
   const toggleTheme = useCallback(() => {
@@ -113,7 +121,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </div>
       </aside>
       <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-7xl p-5 lg:p-6">{children}</div>
+        {navigating && (
+          <div className="route-bar">
+            <div className="route-bar-fill" />
+          </div>
+        )}
+        <div key={location.pathname} className="page-enter mx-auto max-w-7xl p-5 lg:p-6">
+          {children}
+        </div>
       </main>
     </div>
   );

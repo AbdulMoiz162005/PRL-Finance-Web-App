@@ -8,3 +8,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <App />
   </React.StrictMode>,
 );
+
+const boot = document.getElementById('boot-splash');
+if (boot) {
+  boot.classList.add('boot-leave');
+  window.setTimeout(() => boot.remove(), 600);
+}

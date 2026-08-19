@@ -1,17 +1,64 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Inbox, Loader2, AlertTriangle } from 'lucide-react';
+import { X, Inbox, AlertTriangle } from 'lucide-react';
 import clsx from 'clsx';
 import { statusColor, statusLabel, fmtNum } from '../lib/format';
 
-export const Spinner: React.FC<{ className?: string }> = ({ className }) => (
-  <div className={clsx('flex items-center justify-center py-12', className)}>
-    <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
+export const Spinner: React.FC<{ className?: string; label?: string }> = ({ className, label = 'Loading…' }) => (
+  <div className={clsx('flex flex-col items-center justify-center py-14', className)}>
+    <div className="relative h-9 w-9">
+      <div className="absolute inset-0 rounded-full border-2 border-brand-100 dark:border-brand-900" />
+      <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-brand-600 animate-spin" />
+    </div>
+    <p className="mt-3 text-xs font-medium text-slate-400 animate-pulse-soft">{label}</p>
   </div>
 );
 
+export const Skeleton: React.FC<{ className?: string }> = ({ className }) => (
+  <div className={clsx('skeleton', className)} />
+);
+
+export const SkeletonBlock: React.FC<{ lines?: number; className?: string }> = ({ lines = 4, className }) => (
+  <div className={clsx('space-y-2.5', className)}>
+    {Array.from({ length: lines }).map((_, i) => (
+      <Skeleton key={i} className={clsx('h-4', i === lines - 1 && 'w-2/3')} />
+    ))}
+  </div>
+);
+
+export const CountUp: React.FC<{ value: number; duration?: number; formatter?: (n: number) => string; className?: string }> = ({
+  value,
+  duration = 700,
+  formatter = (n) => fmtNum(n),
+  className,
+}) => {
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.requestAnimationFrame) {
+      setDisplay(value);
+      return;
+    }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setDisplay(value);
+      return;
+    }
+    let raf = 0;
+    const start = performance.now();
+    const from = 0;
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setDisplay(from + (value - from) * eased);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value, duration]);
+  return <span className={className}>{formatter(display)}</span>;
+};
+
 export const Empty: React.FC<{ message?: string }> = ({ message = 'No records found' }) => (
-  <div className="flex flex-col items-center justify-center py-14 text-slate-400 dark:text-slate-500">
+  <div className="flex flex-col items-center justify-center py-14 text-slate-400 dark:text-slate-500 animate-fade-in">
     <Inbox className="h-10 w-10 mb-2" />
     <p className="text-sm font-medium">{message}</p>
   </div>
@@ -66,12 +113,12 @@ export const StatCard: React.FC<{ label: string; value: React.ReactNode; hint?: 
     blue: 'text-brand-600',
   };
   return (
-    <div className="card p-4">
+    <div className="card card-hover p-4">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
         {icon && <span className="text-slate-400 dark:text-slate-500">{icon}</span>}
       </div>
-      <p className={clsx('mt-2 text-2xl font-bold tracking-tight', tones[tone])}>{value}</p>
+      <p className={clsx('mt-2 text-2xl font-bold tracking-tight tabular-nums', tones[tone])}>{value}</p>
       {hint && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{hint}</p>}
     </div>
   );
