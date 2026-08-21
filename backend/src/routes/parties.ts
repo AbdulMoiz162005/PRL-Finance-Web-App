@@ -1,7 +1,24 @@
 import { Router } from 'express';
+import { pool } from '../db';
+import { asyncHandler, ok } from '../utils';
+import { requireAuth, AuthRequest } from '../middleware/auth';
 import { makeCrud } from './crud';
 
 const router = Router();
+router.use(requireAuth);
+
+// Active suppliers only — governed vendor list for dropdowns
+router.get(
+  '/supplier-options',
+  asyncHandler(async (req: AuthRequest, res) => {
+    const result = await pool.query(
+      `select code, name, name as label from suppliers
+       where company_id = $1 and status = 'active' order by name`,
+      [req.user!.companyId],
+    );
+    ok(res, { items: result.rows });
+  }),
+);
 
 router.use(
   '/customers',

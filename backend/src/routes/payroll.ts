@@ -8,6 +8,20 @@ import { makeCrud } from './crud';
 const router = Router();
 router.use(requireAuth);
 
+// Active employees only — governed list for dropdowns
+router.get(
+  '/employee-options',
+  asyncHandler(async (req: AuthRequest, res) => {
+    const result = await pool.query(
+      `select e.code, e.name, e.name as label, e.department_id, coalesce(d.name, '') as department_name
+       from employees e left join departments d on d.id = e.department_id
+       where e.company_id = $1 and e.status = 'active' order by e.code`,
+      [req.user!.companyId],
+    );
+    ok(res, { items: result.rows });
+  }),
+);
+
 router.use(
   '/employees',
   makeCrud({

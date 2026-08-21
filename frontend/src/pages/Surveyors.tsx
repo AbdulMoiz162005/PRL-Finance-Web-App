@@ -18,6 +18,14 @@ const PKR = (n: number | string | null | undefined): string =>
 
 const pkCount = (n: number) => `Rs ${Number(n).toLocaleString('en-PK', { maximumFractionDigits: 2 })}`;
 
+// Union a governed dropdown's options with the value already on a record so
+// legacy free-text entries stay editable while new entries are steered to masters.
+const optionSet = (opts: string[], current?: string): string[] => {
+  const set = new Set((opts || []).filter(Boolean));
+  if (current) set.add(current);
+  return Array.from(set);
+};
+
 const invStatus = (s?: string | null) => s?.toLowerCase() || 'pending';
 const poStatus = (s?: string | null) => s?.toLowerCase() || 'draft';
 
@@ -264,6 +272,7 @@ const Contracts: React.FC = () => {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
   const [sort, setSort] = useState<SortState>({ by: '', dir: 'asc' });
+  const [serviceTypes, setServiceTypes] = useState<string[]>([]);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -276,6 +285,9 @@ const Contracts: React.FC = () => {
   }, [q, status, sort]);
 
   useEffect(load, [load]);
+  useEffect(() => {
+    api.get('/surveyors/references').then((r) => setServiceTypes(r.data.serviceTypes || [])).catch(() => {});
+  }, []);
 
   const save = async () => {
     setSaving(true);
@@ -370,7 +382,13 @@ const Contracts: React.FC = () => {
             <div className="grid grid-cols-2 gap-3">
               <Field label="Contract Code" value={editing.contract_code} onChange={(v) => setEditing({ ...editing, contract_code: v })} placeholder="PM-TNS-25" />
               <Field label="Contractor" value={editing.contractor} onChange={(v) => setEditing({ ...editing, contractor: v })} />
-              <Field label="Service Type" value={editing.service_type} onChange={(v) => setEditing({ ...editing, service_type: v })} placeholder="Inspection / Surveying" />
+              <div>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Service Type</label>
+                <select className="input mt-1" value={editing.service_type || ''} onChange={(e) => setEditing({ ...editing, service_type: e.target.value })}>
+                  <option value="">Select service type…</option>
+                  {optionSet(serviceTypes, editing.service_type).map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
               <Field label="Contract Value" value={editing.contract_value} onChange={(v) => setEditing({ ...editing, contract_value: v })} type="number" />
               <Field label="Start Date" value={(editing.start_date || '').slice(0, 10)} onChange={(v) => setEditing({ ...editing, start_date: v })} type="date" />
               <Field label="End Date" value={(editing.end_date || '').slice(0, 10)} onChange={(v) => setEditing({ ...editing, end_date: v })} type="date" />
@@ -416,6 +434,8 @@ const InvoicesTab: React.FC = () => {
   const [vendor, setVendor] = useState('');
   const [vendors, setVendors] = useState<string[]>([]);
   const [contracts, setContracts] = useState<any[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<string[]>([]);
+  const [costElements, setCostElements] = useState<{ code: string; name: string }[]>([]);
   const [contract, setContract] = useState('');
   const [q, setQ] = useState('');
   const [minAmount, setMinAmount] = useState('');
@@ -442,6 +462,10 @@ const InvoicesTab: React.FC = () => {
   useEffect(() => {
     api.get('/surveyors/dashboard').then((r) => setVendors((r.data.vendors || []).map((v: any) => v.vendor))).catch(() => {});
     api.get('/surveyors/contracts').then((r) => setContracts(r.data.items || [])).catch(() => {});
+    api.get('/surveyors/references').then((r) => {
+      setServiceTypes(r.data.serviceTypes || []);
+      setCostElements(r.data.costElements || []);
+    }).catch(() => {});
   }, []);
 
   const act = async (id: string, action: 'approve' | 'reject' | 'reopen', remarks?: string) => {
@@ -556,6 +580,8 @@ const InvoicesTab: React.FC = () => {
           value={editing}
           contracts={contracts}
           vendors={vendors}
+          serviceTypes={serviceTypes}
+          costElements={costElements}
           onChange={setEditing}
           onClose={() => setEditing(null)}
           onSave={save}
@@ -575,7 +601,7 @@ const monthOptions = (): string[] => {
   return out;
 };
 
-const InvoiceModal: React.FC<{ value: any; contracts: any[]; vendors: string[]; onChange: (v: any) => void; onClose: () => void; onSave: () => void }> = ({ value, contracts, vendors, onChange, onClose, onSave }) => {
+const InvoiceModal: React.FC<{ value: any; contracts: any[]; vendors: string[]; serviceTypes: string[]; costElements: { code: string; name: string }[]; onChange: (v: any) => void; onClose: () => void; onSave: () => void }> = ({ value, contracts, vendors, serviceTypes, costElements, onChange, onClose, onSave }) => {
   const selectContract = (code: string) => {
     const c = contracts.find((x) => x.contract_code === code);
     onChange({
@@ -587,6 +613,23 @@ const InvoiceModal: React.FC<{ value: any; contracts: any[]; vendors: string[]; 
   };
   const selectedContract = contracts.find((c) => c.contract_code === value.contract_code);
   const remaining = selectedContract ? Number(selectedContract.contract_value) - Number(selectedContract.used_amount) : null;
+  const today = new Date().toISOString().slice(0, 10);
+  const validContract = (c: any): boolean => {
+    if (c.status !== 'open') return false;
+    if (c.end_date && String(c.end_date).slice(0, 10) < today) return false;
+    return Number(c.contract_value) - Number(c.used_amount) > 0;
+  };
+  const contractOptions = optionSet(
+    contracts.filter((c) => validContract(c)).map((c) => c.contract_code),
+    value.contract_code,
+  );
+  const vendorOptions = Array.from(new Set([...vendors, ...contracts.map((c) => c.contractor)])).filter(Boolean);
+  const serviceOptions = (v?: string) => optionSet(serviceTypes, v);
+  const costElementOptions = optionSet(costElements.map((c) => c.code), value.cost_element);
+  const costLabel = (code: string) => {
+    const hit = costElements.find((c) => c.code === code);
+    return hit ? `${hit.code} · ${hit.name}` : code;
+  };
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm animate-fade-in">
       <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-pop ring-1 ring-slate-900/5 dark:bg-slate-900 dark:shadow-none dark:ring-white/10 max-h-[90vh] overflow-y-auto animate-modal">
@@ -598,18 +641,20 @@ const InvoiceModal: React.FC<{ value: any; contracts: any[]; vendors: string[]; 
             <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Vendor</label>
             <select className="input mt-1" value={value.vendor || ''} onChange={(e) => onChange({ ...value, vendor: e.target.value })}>
               <option value="">Select vendor…</option>
-              {Array.from(new Set([...vendors, ...contracts.map((c) => c.contractor)])).filter(Boolean).map((v) => <option key={v} value={v}>{v}</option>)}
+              {vendorOptions.map((v) => <option key={v} value={v}>{v}</option>)}
             </select>
           </div>
           <div>
             <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Contract</label>
             <select className="input mt-1" value={value.contract_code || ''} onChange={(e) => selectContract(e.target.value)}>
               <option value="">No contract (manual entry)</option>
-              {contracts.map((c) => {
+              {contractOptions.map((code) => {
+                const c = contracts.find((x) => x.contract_code === code);
+                if (!c) return <option key={code} value={code}>{code} (archived)</option>;
                 const rem = Number(c.contract_value) - Number(c.used_amount);
                 const full = rem <= 0;
                 return (
-                  <option key={c.id} value={c.contract_code} disabled={c.status !== 'open'}>
+                  <option key={c.id} value={c.contract_code} disabled={!validContract(c)}>
                     {c.contract_code} — {c.contractor} · {c.service_type} · {c.status}{full ? ' · FULLY CONSUMED' : ''}
                   </option>
                 );
@@ -633,10 +678,22 @@ const InvoiceModal: React.FC<{ value: any; contracts: any[]; vendors: string[]; 
             </select>
           </div>
           <Field label="Item No" value={value.item_no} onChange={(v) => onChange({ ...value, item_no: v })} />
-          <Field label="Service Type 1" value={value.service_type_1} onChange={(v) => onChange({ ...value, service_type_1: v })} />
-          <Field label="Service Type 2" value={value.service_type_2} onChange={(v) => onChange({ ...value, service_type_2: v })} />
-          <Field label="Service Type 3" value={value.service_type_3} onChange={(v) => onChange({ ...value, service_type_3: v })} />
-          <Field label="Cost Element" value={value.cost_element} onChange={(v) => onChange({ ...value, cost_element: v })} />
+          {['service_type_1', 'service_type_2', 'service_type_3'].map((key) => (
+            <div key={key}>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Service Type {key.slice(-1)}</label>
+              <select className="input mt-1" value={value[key] || ''} onChange={(e) => onChange({ ...value, [key]: e.target.value })}>
+                <option value="">Select service…</option>
+                {serviceOptions(value[key]).map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          ))}
+          <div>
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Cost Element</label>
+            <select className="input mt-1" value={value.cost_element || ''} onChange={(e) => onChange({ ...value, cost_element: e.target.value })}>
+              <option value="">Select cost element…</option>
+              {costElementOptions.map((code) => <option key={code} value={code}>{costLabel(code)}</option>)}
+            </select>
+          </div>
           <Field label="Invoice Status" value={value.invoice_status} onChange={(v) => onChange({ ...value, invoice_status: v })} />
         </div>
         <div className="mt-5 flex justify-end gap-2">

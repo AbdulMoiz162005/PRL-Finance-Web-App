@@ -9,6 +9,41 @@ delete from pay_orders;
 delete from surveyor_invoices;
 delete from surveyor_contracts;
 
+-- Surveyor master dictionaries (governed dropdown values)
+delete from service_types;
+delete from cost_elements;
+
+insert into service_types (id, company_id, code, name, is_active) values
+('d0000001-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','LAH','Loading Arm Handling',true),
+('d0000002-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','TNS','Tanker and Stock',true),
+('d0000003-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','RENT','Rental',true),
+('d0000004-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','SLOP','Slop Transferring',true),
+('d0000005-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','WA','Wharf Attendant',true),
+('d0000006-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','TH','Tanker Handling',true),
+('d0000007-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','SD','Stock Dipping',true),
+('d0000008-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','ITT','Inter Tank Transfer',true);
+
+insert into cost_elements (id, company_id, code, name, is_active) values
+('d1000001-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','70135','Crude Tanker Surveying',true),
+('d1000002-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','70136','Product Tanker Surveying',true),
+('d1000003-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','89117','HSFO / Export Tanker Surveying',true),
+('d1000004-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','89121','Inter Tank Transfer',true),
+('d1000005-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','73101','Stock Dipping',true);
+
+-- Surveyor vendors promoted to governed supplier master records
+insert into suppliers (id, company_id, code, name, payment_term_days, opening_balance, status) values
+('30000001-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','SURV-01','Bhombal Surveyors',30,0,'active'),
+('30000002-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','SURV-02','Cisco Surveyors',30,0,'active'),
+('30000003-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','SURV-03','JF Energy Surveyors',30,0,'active'),
+('30000004-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','SURV-04','G.B POTTS Surveyors',30,0,'active'),
+('30000005-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','SURV-05','PMS Surveyors (Pvt) Ltd',30,0,'active'),
+('30000006-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','SURV-06','Joseph Lobo Surveyors',30,0,'active'),
+('30000007-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','SURV-07','Atlantic Surveyors',30,0,'active'),
+('30000008-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','SURV-08','Saybolt Surveyors',30,0,'active'),
+('30000009-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','SURV-09','Oceanic Surveyors',30,0,'active'),
+('30000010-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','SURV-10','Shakoor Surveyors',30,0,'active')
+on conflict (company_id, code) do nothing;
+
 -- Surveyor service contracts
 insert into surveyor_contracts (id, company_id, contractor, service_type, contract_code, contract_value, start_date, end_date, status) values
 ('c0000001-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000001','Bhombal','Loading Arm Handling','BH-LD-25',966000,'2025-06-10','2026-06-09','open'),

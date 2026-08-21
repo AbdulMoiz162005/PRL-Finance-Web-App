@@ -604,6 +604,36 @@ create table if not exists approval_requests (
 create index if not exists idx_approval_status on approval_requests (status, entity_type);
 
 -- ============================================================================
+-- Surveyor master dictionaries
+-- ---------------------------------------------------------------------------
+-- Central reference tables feeding every surveyor dropdown so invoices,
+-- contracts and pay orders are entered against governed values instead of
+-- free text (reduces manual-entry errors and duplicate vendor/spelling drift).
+-- ============================================================================
+
+create table if not exists service_types (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references companies(id) on delete cascade,
+  code text not null,
+  name text not null,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (company_id, code)
+);
+
+create table if not exists cost_elements (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references companies(id) on delete cascade,
+  code text not null,
+  name text not null,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (company_id, code)
+);
+
+-- ============================================================================
 -- Surveyor Invoice Processing & Pay Order Automation
 -- Pakistan Refinery Limited - Karachi (Korangi Creek HQ / Keamari Terminal)
 -- ---------------------------------------------------------------------------

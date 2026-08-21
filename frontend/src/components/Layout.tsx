@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, PenLine, FileText, ArrowLeftRight, Package, Factory,
   Wallet, BadgeDollarSign, FileBarChart, ListChecks, ScrollText, Users, Settings,
-  LogOut, Scale, Gauge, Sun, Moon,
+  LogOut, Scale, Gauge, Sun, Moon, ShieldCheck,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '../lib/auth';
@@ -27,6 +27,7 @@ const NAV: NavItem[] = [
   { to: '/assets', label: 'Fixed Assets', icon: <Factory className="h-4 w-4" />, roles: ['admin', 'director', 'accountant', 'auditor'] },
   { to: '/tax', label: 'Tax Management', icon: <Scale className="h-4 w-4" />, roles: ['admin', 'director', 'accountant'] },
   { to: '/surveyors', label: 'Surveyors & Pay Orders', icon: <Gauge className="h-4 w-4" />, roles: ['admin', 'director', 'accountant', 'auditor', 'manager'] },
+  { to: '/control-centre', label: 'Control Centre', icon: <ShieldCheck className="h-4 w-4" />, roles: ['admin', 'director', 'accountant', 'auditor', 'manager'] },
   { to: '/reports', label: 'Reports', icon: <FileBarChart className="h-4 w-4" />, roles: ['admin', 'director', 'accountant', 'auditor', 'manager'] },
   { to: '/budgets', label: 'Budgets', icon: <Scale className="h-4 w-4" />, roles: ['admin', 'director', 'accountant'] },
   { to: '/reconciliations', label: 'Bank Recon', icon: <ArrowLeftRight className="h-4 w-4" />, roles: ['admin', 'director', 'accountant'] },

@@ -1042,6 +1042,69 @@ router.get(
 // Control tower / dashboard
 // ---------------------------------------------------------------------------
 
+// Single reference source for every surveyor dropdown. Masters are unioned
+// with distinct values already in use so legacy records stay selectable while
+// new entries are steered toward governed values. Inactive / expired /
+// fully-consumed records are excluded before they reach the UI.
+router.get(
+  '/references',
+  asyncHandler(async (req: AuthRequest, res) => {
+    const companyId = COMPANY(req);
+    const [st, ce, vendors, contracts] = await Promise.all([
+      pool.query(
+        `select distinct trim(name) as label from (
+           select name from service_types where company_id = $1 and is_active = true
+           union select c.service_type from surveyor_contracts c where c.company_id = $1 and c.service_type is not null and trim(c.service_type) <> ''
+           union select i.service_type_1 from surveyor_invoices i where i.company_id = $1 and i.service_type_1 is not null and trim(i.service_type_1) <> ''
+           union select i.service_type_2 from surveyor_invoices i where i.company_id = $1 and i.service_type_2 is not null and trim(i.service_type_2) <> ''
+           union select i.service_type_3 from surveyor_invoices i where i.company_id = $1 and i.service_type_3 is not null and trim(i.service_type_3) <> ''
+         ) s order by label`,
+        [companyId],
+      ),
+      pool.query(
+        `select distinct trim(name) as label, trim(code) as code from (
+           select code, name from cost_elements where company_id = $1 and is_active = true
+           union select i.cost_element, i.cost_element from surveyor_invoices i where i.company_id = $1 and i.cost_element is not null and trim(i.cost_element) <> ''
+           union select pl.cost_element, pl.cost_element from pay_order_lines pl where pl.cost_element is not null and trim(pl.cost_element) <> ''
+         ) c order by label`,
+        [companyId],
+      ),
+      pool.query(
+        `select distinct trim(name) as label from (
+           select name from suppliers where company_id = $1 and status = 'active'
+           union select i.vendor from surveyor_invoices i where i.company_id = $1 and trim(i.vendor) <> ''
+           union select c.contractor from surveyor_contracts c where c.company_id = $1 and trim(c.contractor) <> ''
+         ) v order by label`,
+        [companyId],
+      ),
+      pool.query(
+        `select c.id, c.contract_code, c.contractor, c.service_type, c.contract_value,
+                c.start_date, c.end_date, c.status,
+                coalesce((select sum(i.amount) from surveyor_invoices i where i.contract_id = c.id and i.approval_status = 'Approved'), 0) as used_amount
+         from surveyor_contracts c
+         where c.company_id = $1
+           and (lower(coalesce(c.status, 'open')) = 'open')
+           and (c.end_date is null or c.end_date >= current_date)
+         order by c.contract_code`,
+        [companyId],
+      ),
+    ]);
+    const contractItems = contracts.rows
+      .map((c) => {
+        const used = round2(Number(c.used_amount));
+        const remaining = round2(Number(c.contract_value) - used);
+        return { ...c, used_amount: used, remaining_amount: remaining > 0 ? remaining : 0 };
+      })
+      .filter((c) => c.remaining_amount > 0);
+    ok(res, {
+      serviceTypes: st.rows.map((r) => r.label),
+      costElements: ce.rows.map((r) => ({ code: r.code, name: r.label })),
+      vendors: vendors.rows.map((r) => r.label),
+      contracts: contractItems,
+    });
+  }),
+);
+
 router.get(
   '/dashboard',
   asyncHandler(async (req: AuthRequest, res) => {

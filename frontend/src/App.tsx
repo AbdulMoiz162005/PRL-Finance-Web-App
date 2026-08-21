@@ -18,6 +18,7 @@ import { Reconciliations } from './pages/Reconciliations';
 import { Approvals } from './pages/Approvals';
 import { Audit } from './pages/Audit';
 import { Masters } from './pages/Masters';
+import { ControlCentre } from './pages/ControlCentre';
 import { Settings } from './pages/Settings';
 import { Surveyors } from './pages/Surveyors';
 
@@ -60,6 +61,7 @@ export const App: React.FC = () => (
         <Route path="/approvals" element={page(<Approvals />)} />
         <Route path="/audit" element={page(<Audit />, ['admin', 'director', 'auditor'])} />
         <Route path="/masters" element={page(<Masters />)} />
+        <Route path="/control-centre" element={page(<ControlCentre />, ['admin', 'director', 'accountant', 'auditor', 'manager'])} />
         <Route path="/settings" element={page(<Settings />, ['admin'])} />
         <Route path="/surveyors" element={page(<Surveyors />, ['admin', 'director', 'accountant', 'auditor', 'manager'])} />
         <Route path="*" element={<Navigate to="/" replace />} />
