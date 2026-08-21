@@ -721,6 +721,7 @@ const PayOrders: React.FC = () => {
   const [detail, setDetail] = useState<any>(null);
   const [autoVendor, setAutoVendor] = useState('');
   const [vendors, setVendors] = useState<string[]>([]);
+  const [vendorOptions, setVendorOptions] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState('');
   const [minAmount, setMinAmount] = useState('');
   const [maxAmount, setMaxAmount] = useState('');
@@ -742,6 +743,7 @@ const PayOrders: React.FC = () => {
   useEffect(load, [load]);
   useEffect(() => {
     api.get('/surveyors/dashboard').then((r) => setVendors((r.data.vendors || []).map((v: any) => v.vendor))).catch(() => {});
+    api.get('/surveyors/references').then((r) => setVendorOptions(r.data.vendors || [])).catch(() => {});
   }, []);
 
   const autoGenerate = async () => {
@@ -887,7 +889,13 @@ const PayOrders: React.FC = () => {
           <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-pop ring-1 ring-slate-900/5 dark:bg-slate-900 dark:shadow-none dark:ring-white/10 max-h-[90vh] overflow-y-auto animate-modal">
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">New Pay Order (F.D. 310)</h3>
             <div className="grid grid-cols-3 gap-3 mb-4">
-              <Field label="Vendor" value={form.vendor} onChange={(v) => setForm({ ...form, vendor: v })} />
+              <div>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Vendor</label>
+                <select className="input mt-1" value={form.vendor} onChange={(e) => setForm({ ...form, vendor: e.target.value })}>
+                  <option value="">Select vendor…</option>
+                  {optionSet(vendorOptions, form.vendor).map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </div>
               <div>
                 <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Pay Method</label>
                 <select className="input mt-1" value={form.pay_method} onChange={(e) => setForm({ ...form, pay_method: e.target.value })}>

@@ -3,12 +3,14 @@ import { ShieldCheck, Layers, Tag, Building2, Users, FileSignature, AlertTriangl
 import { api } from '../lib/api';
 import { MasterCrud } from '../components/CrudPage';
 import { PageHeader, StatCard, Tabs, Card, Badge, DataTable, Spinner } from '../components/ui';
-import { fmtDate, fmtMoney } from '../lib/format';
+import { fmtDate, fmtMoney, fmtNum } from '../lib/format';
 import { useAuth } from '../lib/auth';
 
 const DICT_TABS = [
   { key: 'service-types', label: 'Service Types' },
   { key: 'cost-elements', label: 'Cost Elements' },
+  { key: 'cost-centers', label: 'Cost Centers' },
+  { key: 'tax-codes', label: 'Tax Codes' },
   { key: 'vendors', label: 'Vendors' },
   { key: 'employees', label: 'Employees' },
   { key: 'contracts', label: 'Contract Watch' },
@@ -118,6 +120,48 @@ export const ControlCentre: React.FC = () => {
           fields={[
             { key: 'code', label: 'Code', required: true },
             { key: 'name', label: 'Name', required: true },
+            { key: 'is_active', label: 'Active', type: 'select', options: [{ value: 'true', label: 'Active' }, { value: 'false', label: 'Inactive' }] },
+          ]}
+        />
+      )}
+
+      {tab === 'cost-centers' && (
+        <MasterCrud
+          base="/master/cost-centers"
+          title="Cost Centers"
+          subtitle="Cost allocation centers — active centers appear in pay order cost allocations"
+          writeRoles={['admin', 'accountant']}
+          columns={[
+            { key: 'code', header: 'Code', render: (r: any) => <span className="font-mono text-xs font-semibold">{r.code}</span> },
+            { key: 'name', header: 'Name', render: (r: any) => <span className="font-medium">{r.name}</span> },
+            { key: 'description', header: 'Description', render: (r: any) => r.description || '—' },
+            { key: 'is_active', header: 'Status', render: (r: any) => (r.is_active ? <span className="text-emerald-600 text-xs font-semibold">ACTIVE</span> : <span className="text-rose-600 text-xs font-semibold">INACTIVE</span>) },
+          ]}
+          fields={[
+            { key: 'code', label: 'Code', required: true },
+            { key: 'name', label: 'Name', required: true },
+            { key: 'description', label: 'Description', type: 'textarea' },
+            { key: 'is_active', label: 'Active', type: 'select', options: [{ value: 'true', label: 'Active' }, { value: 'false', label: 'Inactive' }] },
+          ]}
+        />
+      )}
+
+      {tab === 'tax-codes' && (
+        <MasterCrud
+          base="/master/tax-codes"
+          title="Tax Codes"
+          subtitle="VAT / sales tax rates — only active codes are offered on invoices"
+          writeRoles={['admin', 'accountant']}
+          columns={[
+            { key: 'code', header: 'Code', render: (r: any) => <span className="font-mono text-xs font-semibold">{r.code}</span> },
+            { key: 'name', header: 'Name', render: (r: any) => <span className="font-medium">{r.name}</span> },
+            { key: 'rate', header: 'Rate', align: 'right' as const, render: (r: any) => <span className="tabular-nums">{fmtNum(r.rate, 0)}%</span> },
+            { key: 'is_active', header: 'Status', render: (r: any) => (r.is_active ? <span className="text-emerald-600 text-xs font-semibold">ACTIVE</span> : <span className="text-rose-600 text-xs font-semibold">INACTIVE</span>) },
+          ]}
+          fields={[
+            { key: 'code', label: 'Code', required: true },
+            { key: 'name', label: 'Name', required: true },
+            { key: 'rate', label: 'Rate (%)', type: 'number', step: 'any' },
             { key: 'is_active', label: 'Active', type: 'select', options: [{ value: 'true', label: 'Active' }, { value: 'false', label: 'Inactive' }] },
           ]}
         />
