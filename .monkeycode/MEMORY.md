@@ -94,3 +94,13 @@ Entries discovered by the Agent during task execution should follow this format:
   - Official PRL logo lives at frontend/public/prl-logo.png (source: https://www.prl.com.pk/wp-content/uploads/2025/03/PRL_NEW_LOGO.png); brand palette navy #2e3c8f, blue #0b74b8, emerald #0b6b2d, red #d71920 is in tailwind.config.js (brand + prl scales).
   - Individual Pay Order documents: frontend component frontend/src/components/PayOrderDoc.tsx renders the formal F.D. 310 layout (print via .pay-order-print CSS in index.css); backend GET /api/surveyors/pay-orders/:id/pdf generates the same document with pdfkit (restricted to admin/director/accountant/auditor).
   - When embedding a binary as a TS string constant for pdfkit doc.image(), write the base64 on a SINGLE line — adjacent quoted string-literal lines get truncated by the esbuild/tsx transform and the decoded buffer silently comes back tiny.
+
+[Project Knowledge Summary]
+- Date: 2026-08-20
+- Context: Discovered by Agent while building the central command/governance module (dropdown masters)
+- Category: Troubleshooting & Debugging
+- Instructions:
+  - Backend search params: list endpoints read `search` (parseSearch in src/routes/parse.ts reads req.query.search), but the generic MasterCrud frontend component sends `?q=`. Curl/API tests against master endpoints must use `?search=` or search silently returns the first row.
+  - `npm run seed` is NOT idempotent for base tables (seed.sql raw inserts, companies_pkey duplicate on re-run). Only surveyor_seed.sql is re-runnable (deletes module tables first). To apply dictionary seeds to an existing DB, run just the surveyor seed file via a tsx one-liner instead of the full seed.
+  - Dropdown governance pattern: management CRUD (makeCrud) lists ALL rows including inactive; separate read-only `/options/*` reference endpoints (or a consolidated `/surveyors/references`) filter to active/valid for dropdowns, unioning master values with distinct legacy values so old records stay selectable. New dictionary tables: service_types, cost_elements (company-scoped, code/name/is_active). Surveyor dropdown sources: /surveyors/references (serviceTypes, costElements, vendors, valid contracts = open + unexpired + balance>0).
+  - Custom GET options endpoints in master.ts use the shared optionList helper (table + labelExpr), and pay attention that makeCrud's company filter is `where <table>.company_id = $1` with search params appended as $2.
